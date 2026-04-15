@@ -1,0 +1,465 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Levantado de textos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #F6F7F9;
+            color: #111827;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #F3F4F6; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+    </style>
+</head>
+<body class="min-h-screen py-16 px-6 selection:bg-[#CCFF00] selection:text-black flex justify-center">
+
+    <div class="w-full max-w-4xl">
+        <!-- HEADER -->
+        <div class="mb-12">
+            <div class="flex items-center gap-4 mb-4">
+                <h1 class="text-[3.5rem] md:text-[4.5rem] font-black text-black tracking-tight leading-none">
+                    Levantado
+                </h1>
+                <div class="w-12 h-12 md:w-14 md:h-14 bg-[#CCFF00] rounded-full flex items-center justify-center shrink-0 shadow-sm">
+                    <svg class="w-7 h-7 md:w-8 md:h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                </div>
+            </div>
+            <div>
+                <span class="bg-[#111111] text-white text-[15px] font-semibold px-6 py-2.5 rounded-full inline-block tracking-wide">
+                    By Mynor Garcia
+                </span>
+            </div>
+        </div>
+
+        <!-- CONFIGURATION CARD -->
+        <div class="bg-white rounded-[2rem] p-8 md:p-10 shadow-sm mb-6 border border-gray-50/50">
+            <div class="flex items-center gap-3 mb-8">
+                <div class="w-4 h-4 bg-[#CCFF00] rounded-[4px] shrink-0"></div>
+                <span class="font-bold text-gray-700 text-lg">Configuración de Estructura</span>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-8">
+                <!-- Empresa -->
+                <div>
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.15em] mb-4">EMPRESA A LEVANTAR</label>
+                    <div class="flex flex-col gap-3">
+                        <label class="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl cursor-pointer hover:border-[#CCFF00] transition-all has-[:checked]:border-[#CCFF00] has-[:checked]:bg-[#CCFF00]/10">
+                            <input type="radio" name="empresa" value="multimodas" class="w-5 h-5 text-black focus:ring-black border-gray-300" checked onchange="toggleOfertas(true)">
+                            <span class="font-bold text-gray-800">Multimodas (MM)</span>
+                        </label>
+                        <label class="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl cursor-pointer hover:border-[#CCFF00] transition-all has-[:checked]:border-[#CCFF00] has-[:checked]:bg-[#CCFF00]/10">
+                            <input type="radio" name="empresa" value="agora" class="w-5 h-5 text-black focus:ring-black border-gray-300" onchange="toggleOfertas(false)">
+                            <span class="font-bold text-gray-800">Agora (AG)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Ofertas Toggle (Solo para Multimodas) -->
+                <div id="ofertasConfig" class="transition-opacity duration-300">
+                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.15em] mb-4">OPCIONES MULTIMODAS</label>
+                    <label class="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl cursor-pointer hover:border-gray-300 transition-all has-[:checked]:border-black has-[:checked]:bg-gray-50">
+                        <input type="checkbox" id="chkOfertas" class="w-5 h-5 rounded border-gray-300 text-black focus:ring-black">
+                        <div>
+                            <span class="block font-bold text-gray-800">Estructura de Ofertas</span>
+                            <span class="block text-[13px] text-gray-500 mt-1 font-medium leading-tight">Agrupa colores con la misma talla sin formato Agora.</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- UPLOAD CARD -->
+        <div class="bg-white rounded-[2rem] p-8 md:p-10 shadow-sm mb-6 border border-gray-50/50">
+            <div class="flex justify-between items-start mb-10">
+                <div class="flex items-center gap-3">
+                    <div class="w-4 h-4 bg-[#CCFF00] rounded-[4px] shrink-0"></div>
+                    <span class="font-bold text-gray-700 text-lg">Archivos Excel</span>
+                </div>
+                <button onclick="document.getElementById('fileInput').click()" class="w-12 h-12 bg-[#F6F7F9] hover:bg-gray-200 text-black rounded-full flex items-center justify-center transition-colors shrink-0">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="flex flex-col">
+                <div class="flex items-center gap-4">
+                    <span id="fileCountNum" class="text-[4.5rem] md:text-[5.5rem] font-black leading-none text-black tracking-tighter">0</span>
+                    <span class="bg-[#CCFF00] text-black text-xs font-bold px-3 py-1.5 rounded-md uppercase tracking-wide">Archivos</span>
+                </div>
+                <span class="text-xs font-bold text-gray-400 uppercase tracking-[0.15em] mt-3">ARCHIVOS A LEVANTAR</span>
+            </div>
+
+            <!-- Lista de archivos seleccionados -->
+            <ul id="filesUl" class="mt-6 text-sm text-gray-500 font-medium space-y-1.5"></ul>
+            
+            <input type="file" id="fileInput" multiple accept=".xlsx" class="hidden">
+        </div>
+
+        <!-- ACTION BAR -->
+        <div class="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-gray-50/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+                <h2 class="text-[1.35rem] font-bold text-black tracking-tight">Ejecutar Levantado</h2>
+                <p class="text-[15px] text-gray-500 mt-1 font-medium">Procesar documentos.</p>
+            </div>
+            <button id="processBtn" class="bg-[#111111] hover:bg-black text-white text-[15px] font-semibold py-4 px-10 rounded-full transition-all active:scale-[0.98] whitespace-nowrap tracking-wide">
+                Iniciar levantado
+            </button>
+        </div>
+
+        <!-- LOGS/TERMINAL AREA -->
+        <div id="logArea" class="hidden mt-6 bg-white rounded-[2rem] p-8 shadow-sm border border-gray-50/50 animate-in fade-in duration-500">
+            <div class="flex items-center gap-3 mb-6">
+                <div class="w-4 h-4 bg-[#CCFF00] rounded-[4px] shrink-0"></div>
+                <span class="font-bold text-gray-700 text-lg">Progreso del proceso</span>
+            </div>
+            
+            <div id="logs" class="bg-[#F6F7F9] rounded-2xl custom-scrollbar p-6 text-[13px] font-mono h-72 overflow-y-auto space-y-2 text-gray-700">
+            </div>
+            
+            <button id="downloadBtn" class="mt-6 w-full bg-[#CCFF00] hover:brightness-95 text-black font-bold py-4 rounded-2xl transition-all flex justify-center items-center gap-2 hidden uppercase tracking-[0.1em] text-sm active:scale-[0.98]">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+                </svg>
+                Descargar Archivos Procesados (.ZIP)
+            </button>
+        </div>
+        
+    </div>
+
+    <script>
+        // --- CONTROL DE UI ---
+        function toggleOfertas(show) {
+            const el = document.getElementById('ofertasConfig');
+            el.style.opacity = show ? '1' : '0.4';
+            el.style.pointerEvents = show ? 'auto' : 'none';
+            if(!show) document.getElementById('chkOfertas').checked = false;
+        }
+
+        // --- LÓGICA DE PROCESAMIENTO ---
+        function limpiarTexto(texto) {
+            if (texto == null) return "";
+            return String(texto).toLowerCase().trim()
+                .normalize('NFD').replace(/[\u0300-\u036f]/g, ""); 
+        }
+
+        function getRemainingLogos(texto) {
+            if (!texto) return "";
+            let partes = String(texto).split(/[\/,]/);
+            let filtradas = [];
+            partes.forEach(p => {
+                let pLimpio = p.trim();
+                pLimpio = pLimpio.replace(/importado/ig, '')
+                                 .replace(/m[eé]xico/ig, '')
+                                 .replace(/piel/ig, '');
+                pLimpio = pLimpio.replace(/^[\s,/\.-]+/, '').replace(/[\s,/\.-]+$/, '').trim();
+                if (pLimpio !== "") filtradas.push(pLimpio);
+            });
+            return filtradas.join(' / ');
+        }
+
+        function cleanVal(val) {
+            if (val == null) return "";
+            let s = String(val).trim();
+            return (s.toLowerCase() === 'nan' || s === '') ? "" : s;
+        }
+
+        const fileInput = document.getElementById('fileInput');
+        const fileCountNum = document.getElementById('fileCountNum');
+        const filesUl = document.getElementById('filesUl');
+        const processBtn = document.getElementById('processBtn');
+        const logArea = document.getElementById('logArea');
+        const logsDiv = document.getElementById('logs');
+        const downloadBtn = document.getElementById('downloadBtn');
+        
+        let selectedFiles = [];
+        let generatedFiles = []; 
+
+        fileInput.addEventListener('change', (e) => {
+            selectedFiles = Array.from(e.target.files).filter(f => f.name.endsWith('.xlsx'));
+            fileCountNum.textContent = selectedFiles.length;
+            filesUl.innerHTML = '';
+            
+            selectedFiles.forEach(f => {
+                let li = document.createElement('li');
+                li.className = "flex items-center gap-2 truncate";
+                li.innerHTML = `<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> ${f.name}`;
+                filesUl.appendChild(li);
+            });
+        });
+
+        function addLog(msg, type="info") {
+            let p = document.createElement('p');
+            let timestamp = new Date().toLocaleTimeString([], {hour12: false});
+            let icon = type === "success" ? "✔" : type === "error" ? "✘" : "›";
+            
+            p.innerHTML = `<span class="text-gray-400 mr-2">[${timestamp}]</span> <span class="mr-1 font-bold">${icon}</span> ${msg}`;
+            
+            if(type === "error") p.className = "text-red-500 font-semibold";
+            else if(type === "success") p.className = "text-green-600 font-semibold";
+            else if(type === "warn") p.className = "text-amber-500 font-medium";
+            else p.className = "text-gray-600";
+            
+            logsDiv.appendChild(p);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        processBtn.addEventListener('click', async () => {
+            if (selectedFiles.length === 0) return;
+            
+            const empresaSeleccionada = document.querySelector('input[name="empresa"]:checked').value;
+            const esOferta = document.getElementById('chkOfertas').checked;
+
+            processBtn.disabled = true;
+            processBtn.textContent = "Procesando...";
+            processBtn.classList.add('opacity-75', 'cursor-not-allowed');
+            
+            logArea.classList.remove('hidden');
+            downloadBtn.classList.add('hidden');
+            logsDiv.innerHTML = '';
+            generatedFiles = [];
+
+            for (let file of selectedFiles) {
+                try {
+                    addLog(`Leyendo archivo: ${file.name}`);
+                    let baseName = file.name.replace(/\.[^/.]+$/, "");
+                    
+                    const data = await file.arrayBuffer();
+                    const workbook = XLSX.read(data, { type: 'array' });
+
+                    for (let sheetName of workbook.SheetNames) {
+                        const worksheet = workbook.Sheets[sheetName];
+                        const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+                        
+                        let filaTitulos = -1;
+
+                        for (let i = 0; i < rawData.length; i++) {
+                            let row = rawData[i];
+                            if (!row) continue;
+                            let filaLimpia = row.map(c => limpiarTexto(c));
+                            if (filaLimpia.some(c => c.includes('codigo')) && filaLimpia.some(c => c.includes('precio') || c.includes('ahora'))) {
+                                filaTitulos = i;
+                                break;
+                            }
+                        }
+
+                        if (filaTitulos !== -1) {
+                            const sheetData = XLSX.utils.sheet_to_json(worksheet, { range: filaTitulos, defval: "" });
+                            let nuevasColumnas = {};
+                            let encontrados = { codigo: false, color: false, tallas: false, precio: false, altura: false, logos: false, piel: false, antes: false, nombre_producto: false, descripcion: false, prenda: false, categoria: false };
+
+                            Object.keys(sheetData[0] || {}).forEach(col => {
+                                let colL = limpiarTexto(col);
+                                if (colL.includes('codigo') && !encontrados.codigo) { nuevasColumnas[col] = 'codigo'; encontrados.codigo = true; }
+                                else if (colL.includes('color') && !encontrados.color) { nuevasColumnas[col] = 'color'; encontrados.color = true; }
+                                else if (colL.includes('talla') && !encontrados.tallas) { nuevasColumnas[col] = 'tallas'; encontrados.tallas = true; }
+                                else if ((colL.includes('precio') || colL.includes('ahora')) && !encontrados.precio) { nuevasColumnas[col] = 'precio'; encontrados.precio = true; }
+                                else if (colL.includes('antes') && !encontrados.antes) { nuevasColumnas[col] = 'antes'; encontrados.antes = true; }
+                                else if (colL.includes('altura') && !encontrados.altura) { nuevasColumnas[col] = 'altura'; encontrados.altura = true; }
+                                else if (colL.includes('logo') && !encontrados.logos) { nuevasColumnas[col] = 'logos'; encontrados.logos = true; }
+                                else if (colL.includes('piel') && !encontrados.piel) { nuevasColumnas[col] = 'piel'; encontrados.piel = true; }
+                                else if (colL.includes('nombre') && colL.includes('producto')) { nuevasColumnas[col] = 'nombre_producto'; }
+                                else if (colL.includes('descripcion')) { nuevasColumnas[col] = 'descripcion'; }
+                                else if (colL.includes('prenda')) { nuevasColumnas[col] = 'prenda'; }
+                                else if (colL.includes('categoria')) { nuevasColumnas[col] = 'categoria'; }
+                                else nuevasColumnas[col] = col;
+                            });
+
+                            let df = sheetData.map(row => {
+                                let newRow = {};
+                                for (let key in row) newRow[nuevasColumnas[key]] = row[key];
+                                return newRow;
+                            }).filter(row => cleanVal(row.codigo) !== "");
+
+                            if (df.length === 0) continue;
+
+                            let columnNames = Object.values(nuevasColumnas);
+                            let esPrenda = limpiarTexto(sheetName).includes('prenda') || columnNames.includes('prenda');
+                            let esVarios = (columnNames.includes('nombre_producto') || columnNames.includes('descripcion')) && !esPrenda;
+                            
+                            let textoFinal = "";
+                            let contadorCajas = 0;
+
+                            let grupos = new Map();
+                            df.forEach(row => {
+                                let cod = String(row.codigo).trim();
+                                if (!grupos.has(cod)) grupos.set(cod, []);
+                                grupos.get(cod).push(row);
+                            });
+
+                            for (let [codigo, grupo] of grupos) {
+                                let pRaw = String(grupo[0].precio || "").toLowerCase().trim();
+                                if (!grupo[0].precio || pRaw === 'nan' || pRaw === '' || pRaw === '0') {
+                                    textoFinal += `${codigo.toUpperCase()}\nADVERTENCIA, CÓDIGO REPETIDO O INCOMPLETO\n[SALTO]\n`;
+                                    contadorCajas++;
+                                    if (contadorCajas % 8 === 0) textoFinal += "\n";
+                                    continue;
+                                }
+
+                                // ---------------------------------------------------------
+                                // ESTRUCTURA AGORA
+                                // ---------------------------------------------------------
+                                if (empresaSeleccionada === 'agora') {
+                                    textoFinal += `${codigo.toUpperCase()}\n`;
+                                    
+                                    // Agrupación por tallas
+                                    let mapaTallas = new Map();
+                                    grupo.forEach(f => {
+                                        let c = cleanVal(f.color), t = cleanVal(f.tallas);
+                                        if (c || t) {
+                                            let tKey = t || "SIN_TALLA";
+                                            if (!mapaTallas.has(tKey)) mapaTallas.set(tKey, []);
+                                            if (c) mapaTallas.get(tKey).push(c);
+                                        }
+                                    });
+
+                                    for (let [talla, colores] of mapaTallas) {
+                                        colores.forEach(c => { textoFinal += `${c}\n`; });
+                                        if (talla !== "SIN_TALLA") textoFinal += `Tallas: ${talla}\n`;
+                                    }
+
+                                    // Precio al final
+                                    let precio = String(grupo[0].precio).replace(/q/gi, '').replace(/\.0$/, '').trim();
+                                    textoFinal += `Q. ${precio}\n`;
+
+                                    // Logos al final
+                                    let rLogo = cleanVal(grupo[0].logos);
+                                    let rPiel = cleanVal(grupo[0].piel);
+                                    let combinedClean = limpiarTexto(rLogo + " " + rPiel);
+                                    let arrTop = [];
+                                    if (combinedClean.includes('importado')) arrTop.push("IMPORTADO");
+                                    else if (combinedClean.includes('mexico')) arrTop.push("MÉXICO");
+                                    if (combinedClean.includes('piel')) arrTop.push("PIEL");
+
+                                    let lval = getRemainingLogos(rLogo);
+
+                                    if (arrTop.length > 0) textoFinal += `${arrTop.join(' ')}\n`;
+                                    if (lval) textoFinal += `${lval}\n`;
+                                } 
+                                // ---------------------------------------------------------
+                                // ESTRUCTURA MULTIMODAS (CON O SIN OFERTAS)
+                                // ---------------------------------------------------------
+                                else {
+                                    // 1. Logos superiores (solo zapatos)
+                                    if (!esPrenda && !esVarios) {
+                                        let rLogo = cleanVal(grupo[0].logos);
+                                        let rPiel = cleanVal(grupo[0].piel);
+                                        let arrTop = [];
+                                        let combinedTopClean = limpiarTexto(rLogo + " " + rPiel);
+                                        
+                                        if (combinedTopClean.includes('importado')) arrTop.push("IMPORTADO");
+                                        else if (combinedTopClean.includes('mexico')) arrTop.push("MÉXICO");
+                                        if (combinedTopClean.includes('piel')) arrTop.push("PIEL");
+                                        
+                                        if (arrTop.length > 0) textoFinal += `${arrTop.join(' ')}\n`;
+                                    }
+
+                                    // 2. Código
+                                    textoFinal += `${codigo.toUpperCase()}\n`;
+                                    
+                                    // 3. Prenda / Nombre producto (Textos antes de colores)
+                                    if (esPrenda) {
+                                        let prendaVal = cleanVal(grupo[0].prenda) || cleanVal(grupo[0].descripcion) || cleanVal(grupo[0].categoria);
+                                        if (prendaVal) textoFinal += `${prendaVal.toUpperCase()}\n`;
+                                    } else if (esVarios) {
+                                        let nom = cleanVal(grupo[0].nombre_producto);
+                                        if (nom) textoFinal += `${nom}\n`;
+                                    }
+
+                                    // 4. Colores y Tallas (Aquí aplica Ofertas de forma global)
+                                    if (esOferta) {
+                                        let mapaTallas = new Map();
+                                        grupo.forEach(f => {
+                                            let c = cleanVal(f.color), t = cleanVal(f.tallas);
+                                            if (c || t) {
+                                                let tKey = t || "SIN_TALLA";
+                                                if (!mapaTallas.has(tKey)) mapaTallas.set(tKey, []);
+                                                if (c) mapaTallas.get(tKey).push(c);
+                                            }
+                                        });
+
+                                        for (let [talla, colores] of mapaTallas) {
+                                            colores.forEach(c => { textoFinal += `${c}\n`; });
+                                            if (talla !== "SIN_TALLA") textoFinal += `${talla}\n`;
+                                        }
+                                    } else {
+                                        grupo.forEach(f => {
+                                            let c = cleanVal(f.color), t = cleanVal(f.tallas);
+                                            if (esVarios && !t && c) {
+                                                textoFinal += `${c}\n`;
+                                            } else {
+                                                if (c && t) textoFinal += `${c} / ${t}\n`; else if (c) textoFinal += `${c}\n`; else if (t) textoFinal += `${t}\n`;
+                                            }
+                                        });
+                                    }
+
+                                    // 5. Descripciones Varios / Altura Zapatos (Después de colores)
+                                    if (esVarios) {
+                                        let desc = cleanVal(grupo[0].descripcion);
+                                        if (desc) textoFinal += `${desc.replace(/\n/g, ' ')}\n`;
+                                    } else if (!esPrenda && !esVarios) {
+                                        let alt = cleanVal(grupo[0].altura);
+                                        if (alt) textoFinal += `Altura: ${alt}\n`;
+                                    }
+
+                                    // 6. Precios y logos inferiores
+                                    let precio = String(grupo[0].precio).replace(/q/gi, '').replace(/\.0$/, '').trim();
+                                    textoFinal += `Q. ${precio}\n`;
+                                    let antes = cleanVal(grupo[0].antes);
+                                    if (antes) textoFinal += `Antes: Q. ${antes.replace(/q/gi, '').replace(/\.0$/, '').trim()}\n`;
+                                    if (!esPrenda && !esVarios) {
+                                        let lval = getRemainingLogos(cleanVal(grupo[0].logos));
+                                        if (lval) textoFinal += `${lval}\n`;
+                                    }
+                                }
+
+                                textoFinal += `[SALTO]\n`;
+                                contadorCajas++;
+                                if (contadorCajas % 8 === 0) textoFinal += "\n";
+                            }
+
+                            if (textoFinal !== "") {
+                                let fn = `${baseName}_${sheetName.replace(/[\/\\]/g, '-')}.txt`;
+                                generatedFiles.push({ name: fn, content: textoFinal });
+                                addLog(`OK: Archivo generado -> ${fn}`, "success");
+                            }
+                        }
+                    }
+                } catch (err) {
+                    addLog(`Error fatal en '${file.name}': ${err.message}`, "error");
+                }
+            }
+
+            processBtn.textContent = "Iniciar levantado";
+            processBtn.disabled = false;
+            processBtn.classList.remove('opacity-75', 'cursor-not-allowed');
+            
+            if (generatedFiles.length > 0) {
+                downloadBtn.classList.remove('hidden');
+                addLog(`PROCESO COMPLETADO. ${generatedFiles.length} archivos generados con éxito.`, "success");
+            }
+        });
+
+        downloadBtn.addEventListener('click', () => {
+            let zip = new JSZip();
+            generatedFiles.forEach(f => zip.file(f.name, f.content));
+            zip.generateAsync({type:"blob"}).then(c => saveAs(c, "Archivos_Procesados.zip"));
+        });
+    </script>
+</body>
+</html>
