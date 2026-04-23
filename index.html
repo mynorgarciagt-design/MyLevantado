@@ -1,465 +1,596 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Levantado de textos</title>
+    <title>Validación de Cambios</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         
         body { 
-            font-family: 'Inter', sans-serif; 
-            background-color: #F6F7F9;
-            color: #111827;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; 
+            background-color: #F8F9FA; 
+            margin: 0;
+            padding: 0;
+            color: #111111;
         }
-
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #F3F4F6; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+ 
+        .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background-color: #E2E8F0; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background-color: #CBD5E1; }
+ 
+        .neon-accent { background-color: #D4FF26; }
+        .card-shadow { box-shadow: 0 4px 20px -4px rgba(0, 0, 0, 0.03); }
     </style>
 </head>
-<body class="min-h-screen py-16 px-6 selection:bg-[#CCFF00] selection:text-black flex justify-center">
-
-    <div class="w-full max-w-4xl">
-        <!-- HEADER -->
-        <div class="mb-12">
-            <div class="flex items-center gap-4 mb-4">
-                <h1 class="text-[3.5rem] md:text-[4.5rem] font-black text-black tracking-tight leading-none">
-                    Levantado
-                </h1>
-                <div class="w-12 h-12 md:w-14 md:h-14 bg-[#CCFF00] rounded-full flex items-center justify-center shrink-0 shadow-sm">
-                    <svg class="w-7 h-7 md:w-8 md:h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path>
-                    </svg>
-                </div>
-            </div>
-            <div>
-                <span class="bg-[#111111] text-white text-[15px] font-semibold px-6 py-2.5 rounded-full inline-block tracking-wide">
-                    By Mynor Garcia
-                </span>
-            </div>
-        </div>
-
-        <!-- CONFIGURATION CARD -->
-        <div class="bg-white rounded-[2rem] p-8 md:p-10 shadow-sm mb-6 border border-gray-50/50">
-            <div class="flex items-center gap-3 mb-8">
-                <div class="w-4 h-4 bg-[#CCFF00] rounded-[4px] shrink-0"></div>
-                <span class="font-bold text-gray-700 text-lg">Configuración de Estructura</span>
-            </div>
-
-            <div class="grid md:grid-cols-2 gap-8">
-                <!-- Empresa -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.15em] mb-4">EMPRESA A LEVANTAR</label>
-                    <div class="flex flex-col gap-3">
-                        <label class="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl cursor-pointer hover:border-[#CCFF00] transition-all has-[:checked]:border-[#CCFF00] has-[:checked]:bg-[#CCFF00]/10">
-                            <input type="radio" name="empresa" value="multimodas" class="w-5 h-5 text-black focus:ring-black border-gray-300" checked onchange="toggleOfertas(true)">
-                            <span class="font-bold text-gray-800">Multimodas (MM)</span>
-                        </label>
-                        <label class="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl cursor-pointer hover:border-[#CCFF00] transition-all has-[:checked]:border-[#CCFF00] has-[:checked]:bg-[#CCFF00]/10">
-                            <input type="radio" name="empresa" value="agora" class="w-5 h-5 text-black focus:ring-black border-gray-300" onchange="toggleOfertas(false)">
-                            <span class="font-bold text-gray-800">Agora (AG)</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Ofertas Toggle (Solo para Multimodas) -->
-                <div id="ofertasConfig" class="transition-opacity duration-300">
-                    <label class="block text-xs font-bold text-gray-400 uppercase tracking-[0.15em] mb-4">OPCIONES MULTIMODAS</label>
-                    <label class="flex items-center gap-4 p-4 border-2 border-gray-100 rounded-2xl cursor-pointer hover:border-gray-300 transition-all has-[:checked]:border-black has-[:checked]:bg-gray-50">
-                        <input type="checkbox" id="chkOfertas" class="w-5 h-5 rounded border-gray-300 text-black focus:ring-black">
-                        <div>
-                            <span class="block font-bold text-gray-800">Estructura de Ofertas</span>
-                            <span class="block text-[13px] text-gray-500 mt-1 font-medium leading-tight">Agrupa colores con la misma talla sin formato Agora.</span>
-                        </div>
-                    </label>
-                </div>
-            </div>
-        </div>
-
-        <!-- UPLOAD CARD -->
-        <div class="bg-white rounded-[2rem] p-8 md:p-10 shadow-sm mb-6 border border-gray-50/50">
-            <div class="flex justify-between items-start mb-10">
-                <div class="flex items-center gap-3">
-                    <div class="w-4 h-4 bg-[#CCFF00] rounded-[4px] shrink-0"></div>
-                    <span class="font-bold text-gray-700 text-lg">Archivos Excel</span>
-                </div>
-                <button onclick="document.getElementById('fileInput').click()" class="w-12 h-12 bg-[#F6F7F9] hover:bg-gray-200 text-black rounded-full flex items-center justify-center transition-colors shrink-0">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                    </svg>
-                </button>
-            </div>
-            
-            <div class="flex flex-col">
-                <div class="flex items-center gap-4">
-                    <span id="fileCountNum" class="text-[4.5rem] md:text-[5.5rem] font-black leading-none text-black tracking-tighter">0</span>
-                    <span class="bg-[#CCFF00] text-black text-xs font-bold px-3 py-1.5 rounded-md uppercase tracking-wide">Archivos</span>
-                </div>
-                <span class="text-xs font-bold text-gray-400 uppercase tracking-[0.15em] mt-3">ARCHIVOS A LEVANTAR</span>
-            </div>
-
-            <!-- Lista de archivos seleccionados -->
-            <ul id="filesUl" class="mt-6 text-sm text-gray-500 font-medium space-y-1.5"></ul>
-            
-            <input type="file" id="fileInput" multiple accept=".xlsx" class="hidden">
-        </div>
-
-        <!-- ACTION BAR -->
-        <div class="bg-white rounded-[2rem] p-6 md:p-8 shadow-sm border border-gray-50/50 flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div>
-                <h2 class="text-[1.35rem] font-bold text-black tracking-tight">Ejecutar Levantado</h2>
-                <p class="text-[15px] text-gray-500 mt-1 font-medium">Procesar documentos.</p>
-            </div>
-            <button id="processBtn" class="bg-[#111111] hover:bg-black text-white text-[15px] font-semibold py-4 px-10 rounded-full transition-all active:scale-[0.98] whitespace-nowrap tracking-wide">
-                Iniciar levantado
-            </button>
-        </div>
-
-        <!-- LOGS/TERMINAL AREA -->
-        <div id="logArea" class="hidden mt-6 bg-white rounded-[2rem] p-8 shadow-sm border border-gray-50/50 animate-in fade-in duration-500">
-            <div class="flex items-center gap-3 mb-6">
-                <div class="w-4 h-4 bg-[#CCFF00] rounded-[4px] shrink-0"></div>
-                <span class="font-bold text-gray-700 text-lg">Progreso del proceso</span>
-            </div>
-            
-            <div id="logs" class="bg-[#F6F7F9] rounded-2xl custom-scrollbar p-6 text-[13px] font-mono h-72 overflow-y-auto space-y-2 text-gray-700">
-            </div>
-            
-            <button id="downloadBtn" class="mt-6 w-full bg-[#CCFF00] hover:brightness-95 text-black font-bold py-4 rounded-2xl transition-all flex justify-center items-center gap-2 hidden uppercase tracking-[0.1em] text-sm active:scale-[0.98]">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
-                </svg>
-                Descargar Archivos Procesados (.ZIP)
-            </button>
-        </div>
-        
-    </div>
-
-    <script>
-        // --- CONTROL DE UI ---
-        function toggleOfertas(show) {
-            const el = document.getElementById('ofertasConfig');
-            el.style.opacity = show ? '1' : '0.4';
-            el.style.pointerEvents = show ? 'auto' : 'none';
-            if(!show) document.getElementById('chkOfertas').checked = false;
-        }
-
-        // --- LÓGICA DE PROCESAMIENTO ---
-        function limpiarTexto(texto) {
-            if (texto == null) return "";
-            return String(texto).toLowerCase().trim()
-                .normalize('NFD').replace(/[\u0300-\u036f]/g, ""); 
-        }
-
-        function getRemainingLogos(texto) {
+<body>
+    <div id="root"></div>
+ 
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+ 
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+ 
+        const COLORES_PREDEFINIDOS = [
+            "01 Negro", "02 Cafe", "03 Camel", "04 Marino", "05 Azul",
+            "06 Rojo", "07 Blanco", "08 Gris", "09 Plata", "10 Oro",
+            "11 Miel", "12 Beige", "13 Vino", "14 Mostaza", "15 Verde",
+            "16 Rosa", "17 Fuchsia", "18 Morado", "19 Lila", "20 Amarillo",
+            "21 Naranja", "22 Celeste", "23 Turquesa", "24 Hueso", "25 Arena",
+            "26 Taupe", "27 Cobre", "28 Bronce", "29 Plomo", "30 Transparente",
+            "31 Multicolor", "32 Estampado", "33 Leopardo", "34 Charol", "35 Gamuza",
+            "36 Lona", "37 Rosado"
+        ];
+ 
+        // FIX: normalizarTexto ya no reemplaza '/' para no romper codigos con slash
+        const normalizarTexto = (texto) => {
             if (!texto) return "";
-            let partes = String(texto).split(/[\/,]/);
-            let filtradas = [];
-            partes.forEach(p => {
-                let pLimpio = p.trim();
-                pLimpio = pLimpio.replace(/importado/ig, '')
-                                 .replace(/m[eé]xico/ig, '')
-                                 .replace(/piel/ig, '');
-                pLimpio = pLimpio.replace(/^[\s,/\.-]+/, '').replace(/[\s,/\.-]+$/, '').trim();
-                if (pLimpio !== "") filtradas.push(pLimpio);
-            });
-            return filtradas.join(' / ');
-        }
-
-        function cleanVal(val) {
-            if (val == null) return "";
-            let s = String(val).trim();
-            return (s.toLowerCase() === 'nan' || s === '') ? "" : s;
-        }
-
-        const fileInput = document.getElementById('fileInput');
-        const fileCountNum = document.getElementById('fileCountNum');
-        const filesUl = document.getElementById('filesUl');
-        const processBtn = document.getElementById('processBtn');
-        const logArea = document.getElementById('logArea');
-        const logsDiv = document.getElementById('logs');
-        const downloadBtn = document.getElementById('downloadBtn');
-        
-        let selectedFiles = [];
-        let generatedFiles = []; 
-
-        fileInput.addEventListener('change', (e) => {
-            selectedFiles = Array.from(e.target.files).filter(f => f.name.endsWith('.xlsx'));
-            fileCountNum.textContent = selectedFiles.length;
-            filesUl.innerHTML = '';
-            
-            selectedFiles.forEach(f => {
-                let li = document.createElement('li');
-                li.className = "flex items-center gap-2 truncate";
-                li.innerHTML = `<svg class="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg> ${f.name}`;
-                filesUl.appendChild(li);
-            });
-        });
-
-        function addLog(msg, type="info") {
-            let p = document.createElement('p');
-            let timestamp = new Date().toLocaleTimeString([], {hour12: false});
-            let icon = type === "success" ? "✔" : type === "error" ? "✘" : "›";
-            
-            p.innerHTML = `<span class="text-gray-400 mr-2">[${timestamp}]</span> <span class="mr-1 font-bold">${icon}</span> ${msg}`;
-            
-            if(type === "error") p.className = "text-red-500 font-semibold";
-            else if(type === "success") p.className = "text-green-600 font-semibold";
-            else if(type === "warn") p.className = "text-amber-500 font-medium";
-            else p.className = "text-gray-600";
-            
-            logsDiv.appendChild(p);
-            logsDiv.scrollTop = logsDiv.scrollHeight;
-        }
-
-        processBtn.addEventListener('click', async () => {
-            if (selectedFiles.length === 0) return;
-            
-            const empresaSeleccionada = document.querySelector('input[name="empresa"]:checked').value;
-            const esOferta = document.getElementById('chkOfertas').checked;
-
-            processBtn.disabled = true;
-            processBtn.textContent = "Procesando...";
-            processBtn.classList.add('opacity-75', 'cursor-not-allowed');
-            
-            logArea.classList.remove('hidden');
-            downloadBtn.classList.add('hidden');
-            logsDiv.innerHTML = '';
-            generatedFiles = [];
-
-            for (let file of selectedFiles) {
-                try {
-                    addLog(`Leyendo archivo: ${file.name}`);
-                    let baseName = file.name.replace(/\.[^/.]+$/, "");
-                    
-                    const data = await file.arrayBuffer();
-                    const workbook = XLSX.read(data, { type: 'array' });
-
-                    for (let sheetName of workbook.SheetNames) {
-                        const worksheet = workbook.Sheets[sheetName];
-                        const rawData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
-                        
-                        let filaTitulos = -1;
-
-                        for (let i = 0; i < rawData.length; i++) {
-                            let row = rawData[i];
-                            if (!row) continue;
-                            let filaLimpia = row.map(c => limpiarTexto(c));
-                            if (filaLimpia.some(c => c.includes('codigo')) && filaLimpia.some(c => c.includes('precio') || c.includes('ahora'))) {
-                                filaTitulos = i;
-                                break;
-                            }
-                        }
-
-                        if (filaTitulos !== -1) {
-                            const sheetData = XLSX.utils.sheet_to_json(worksheet, { range: filaTitulos, defval: "" });
-                            let nuevasColumnas = {};
-                            let encontrados = { codigo: false, color: false, tallas: false, precio: false, altura: false, logos: false, piel: false, antes: false, nombre_producto: false, descripcion: false, prenda: false, categoria: false };
-
-                            Object.keys(sheetData[0] || {}).forEach(col => {
-                                let colL = limpiarTexto(col);
-                                if (colL.includes('codigo') && !encontrados.codigo) { nuevasColumnas[col] = 'codigo'; encontrados.codigo = true; }
-                                else if (colL.includes('color') && !encontrados.color) { nuevasColumnas[col] = 'color'; encontrados.color = true; }
-                                else if (colL.includes('talla') && !encontrados.tallas) { nuevasColumnas[col] = 'tallas'; encontrados.tallas = true; }
-                                else if ((colL.includes('precio') || colL.includes('ahora')) && !encontrados.precio) { nuevasColumnas[col] = 'precio'; encontrados.precio = true; }
-                                else if (colL.includes('antes') && !encontrados.antes) { nuevasColumnas[col] = 'antes'; encontrados.antes = true; }
-                                else if (colL.includes('altura') && !encontrados.altura) { nuevasColumnas[col] = 'altura'; encontrados.altura = true; }
-                                else if (colL.includes('logo') && !encontrados.logos) { nuevasColumnas[col] = 'logos'; encontrados.logos = true; }
-                                else if (colL.includes('piel') && !encontrados.piel) { nuevasColumnas[col] = 'piel'; encontrados.piel = true; }
-                                else if (colL.includes('nombre') && colL.includes('producto')) { nuevasColumnas[col] = 'nombre_producto'; }
-                                else if (colL.includes('descripcion')) { nuevasColumnas[col] = 'descripcion'; }
-                                else if (colL.includes('prenda')) { nuevasColumnas[col] = 'prenda'; }
-                                else if (colL.includes('categoria')) { nuevasColumnas[col] = 'categoria'; }
-                                else nuevasColumnas[col] = col;
-                            });
-
-                            let df = sheetData.map(row => {
-                                let newRow = {};
-                                for (let key in row) newRow[nuevasColumnas[key]] = row[key];
-                                return newRow;
-                            }).filter(row => cleanVal(row.codigo) !== "");
-
-                            if (df.length === 0) continue;
-
-                            let columnNames = Object.values(nuevasColumnas);
-                            let esPrenda = limpiarTexto(sheetName).includes('prenda') || columnNames.includes('prenda');
-                            let esVarios = (columnNames.includes('nombre_producto') || columnNames.includes('descripcion')) && !esPrenda;
-                            
-                            let textoFinal = "";
-                            let contadorCajas = 0;
-
-                            let grupos = new Map();
-                            df.forEach(row => {
-                                let cod = String(row.codigo).trim();
-                                if (!grupos.has(cod)) grupos.set(cod, []);
-                                grupos.get(cod).push(row);
-                            });
-
-                            for (let [codigo, grupo] of grupos) {
-                                let pRaw = String(grupo[0].precio || "").toLowerCase().trim();
-                                if (!grupo[0].precio || pRaw === 'nan' || pRaw === '' || pRaw === '0') {
-                                    textoFinal += `${codigo.toUpperCase()}\nADVERTENCIA, CÓDIGO REPETIDO O INCOMPLETO\n[SALTO]\n`;
-                                    contadorCajas++;
-                                    if (contadorCajas % 8 === 0) textoFinal += "\n";
-                                    continue;
-                                }
-
-                                // ---------------------------------------------------------
-                                // ESTRUCTURA AGORA
-                                // ---------------------------------------------------------
-                                if (empresaSeleccionada === 'agora') {
-                                    textoFinal += `${codigo.toUpperCase()}\n`;
-                                    
-                                    // Agrupación por tallas
-                                    let mapaTallas = new Map();
-                                    grupo.forEach(f => {
-                                        let c = cleanVal(f.color), t = cleanVal(f.tallas);
-                                        if (c || t) {
-                                            let tKey = t || "SIN_TALLA";
-                                            if (!mapaTallas.has(tKey)) mapaTallas.set(tKey, []);
-                                            if (c) mapaTallas.get(tKey).push(c);
-                                        }
-                                    });
-
-                                    for (let [talla, colores] of mapaTallas) {
-                                        colores.forEach(c => { textoFinal += `${c}\n`; });
-                                        if (talla !== "SIN_TALLA") textoFinal += `Tallas: ${talla}\n`;
-                                    }
-
-                                    // Precio al final
-                                    let precio = String(grupo[0].precio).replace(/q/gi, '').replace(/\.0$/, '').trim();
-                                    textoFinal += `Q. ${precio}\n`;
-
-                                    // Logos al final
-                                    let rLogo = cleanVal(grupo[0].logos);
-                                    let rPiel = cleanVal(grupo[0].piel);
-                                    let combinedClean = limpiarTexto(rLogo + " " + rPiel);
-                                    let arrTop = [];
-                                    if (combinedClean.includes('importado')) arrTop.push("IMPORTADO");
-                                    else if (combinedClean.includes('mexico')) arrTop.push("MÉXICO");
-                                    if (combinedClean.includes('piel')) arrTop.push("PIEL");
-
-                                    let lval = getRemainingLogos(rLogo);
-
-                                    if (arrTop.length > 0) textoFinal += `${arrTop.join(' ')}\n`;
-                                    if (lval) textoFinal += `${lval}\n`;
-                                } 
-                                // ---------------------------------------------------------
-                                // ESTRUCTURA MULTIMODAS (CON O SIN OFERTAS)
-                                // ---------------------------------------------------------
-                                else {
-                                    // 1. Logos superiores (solo zapatos)
-                                    if (!esPrenda && !esVarios) {
-                                        let rLogo = cleanVal(grupo[0].logos);
-                                        let rPiel = cleanVal(grupo[0].piel);
-                                        let arrTop = [];
-                                        let combinedTopClean = limpiarTexto(rLogo + " " + rPiel);
-                                        
-                                        if (combinedTopClean.includes('importado')) arrTop.push("IMPORTADO");
-                                        else if (combinedTopClean.includes('mexico')) arrTop.push("MÉXICO");
-                                        if (combinedTopClean.includes('piel')) arrTop.push("PIEL");
-                                        
-                                        if (arrTop.length > 0) textoFinal += `${arrTop.join(' ')}\n`;
-                                    }
-
-                                    // 2. Código
-                                    textoFinal += `${codigo.toUpperCase()}\n`;
-                                    
-                                    // 3. Prenda / Nombre producto (Textos antes de colores)
-                                    if (esPrenda) {
-                                        let prendaVal = cleanVal(grupo[0].prenda) || cleanVal(grupo[0].descripcion) || cleanVal(grupo[0].categoria);
-                                        if (prendaVal) textoFinal += `${prendaVal.toUpperCase()}\n`;
-                                    } else if (esVarios) {
-                                        let nom = cleanVal(grupo[0].nombre_producto);
-                                        if (nom) textoFinal += `${nom}\n`;
-                                    }
-
-                                    // 4. Colores y Tallas (Aquí aplica Ofertas de forma global)
-                                    if (esOferta) {
-                                        let mapaTallas = new Map();
-                                        grupo.forEach(f => {
-                                            let c = cleanVal(f.color), t = cleanVal(f.tallas);
-                                            if (c || t) {
-                                                let tKey = t || "SIN_TALLA";
-                                                if (!mapaTallas.has(tKey)) mapaTallas.set(tKey, []);
-                                                if (c) mapaTallas.get(tKey).push(c);
-                                            }
-                                        });
-
-                                        for (let [talla, colores] of mapaTallas) {
-                                            colores.forEach(c => { textoFinal += `${c}\n`; });
-                                            if (talla !== "SIN_TALLA") textoFinal += `${talla}\n`;
-                                        }
-                                    } else {
-                                        grupo.forEach(f => {
-                                            let c = cleanVal(f.color), t = cleanVal(f.tallas);
-                                            if (esVarios && !t && c) {
-                                                textoFinal += `${c}\n`;
-                                            } else {
-                                                if (c && t) textoFinal += `${c} / ${t}\n`; else if (c) textoFinal += `${c}\n`; else if (t) textoFinal += `${t}\n`;
-                                            }
-                                        });
-                                    }
-
-                                    // 5. Descripciones Varios / Altura Zapatos (Después de colores)
-                                    if (esVarios) {
-                                        let desc = cleanVal(grupo[0].descripcion);
-                                        if (desc) textoFinal += `${desc.replace(/\n/g, ' ')}\n`;
-                                    } else if (!esPrenda && !esVarios) {
-                                        let alt = cleanVal(grupo[0].altura);
-                                        if (alt) textoFinal += `Altura: ${alt}\n`;
-                                    }
-
-                                    // 6. Precios y logos inferiores
-                                    let precio = String(grupo[0].precio).replace(/q/gi, '').replace(/\.0$/, '').trim();
-                                    textoFinal += `Q. ${precio}\n`;
-                                    let antes = cleanVal(grupo[0].antes);
-                                    if (antes) textoFinal += `Antes: Q. ${antes.replace(/q/gi, '').replace(/\.0$/, '').trim()}\n`;
-                                    if (!esPrenda && !esVarios) {
-                                        let lval = getRemainingLogos(cleanVal(grupo[0].logos));
-                                        if (lval) textoFinal += `${lval}\n`;
-                                    }
-                                }
-
-                                textoFinal += `[SALTO]\n`;
-                                contadorCajas++;
-                                if (contadorCajas % 8 === 0) textoFinal += "\n";
-                            }
-
-                            if (textoFinal !== "") {
-                                let fn = `${baseName}_${sheetName.replace(/[\/\\]/g, '-')}.txt`;
-                                generatedFiles.push({ name: fn, content: textoFinal });
-                                addLog(`OK: Archivo generado -> ${fn}`, "success");
-                            }
-                        }
+            let t = String(texto).toLowerCase();
+            t = t.replace(/[\-\:]/g, ' ');          // quitamos '/' de aqui
+            t = t.replace(/\bal\b/g, ' ');
+            t = t.replace(/\by\b/g, ',');
+            t = t.replace(/\s*,\s*/g, ',');
+            t = t.replace(/\s+/g, ' ').trim();
+            return t;
+        };
+ 
+        // FIX: extraerTextoPdf ahora cacheable — retorna objeto con crudo y normalizado
+        const extraerTextoPdf = async (file) => {
+            const buffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({data: new Uint8Array(buffer)}).promise;
+            let textoCompleto = "";
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                
+                let pageText = "";
+                let lastY = -1;
+                
+                for (let item of textContent.items) {
+                    if (lastY !== -1 && Math.abs(lastY - item.transform[5]) > 2) {
+                        pageText += "\n";
                     }
-                } catch (err) {
-                    addLog(`Error fatal en '${file.name}': ${err.message}`, "error");
+                    pageText += item.str;
+                    lastY = item.transform[5];
+                }
+                textoCompleto += pageText + "\n";
+            }
+            return { crudo: textoCompleto, normalizado: normalizarTexto(textoCompleto) };
+        };
+ 
+        const obtenerPatronColores = () => {
+            let colorList = [...COLORES_PREDEFINIDOS];
+            colorList.sort((a, b) => b.length - a.length);
+ 
+            let patrones = [];
+            colorList.forEach(c => {
+                let cNorm = c.trim().toLowerCase();
+                let match = cNorm.match(/^(\d+)\s+(.+)$/);
+                if (match) {
+                    let num = match[1];
+                    let nombre = match[2].replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); 
+                    patrones.push(`\\b0*${num}\\s+${nombre}\\b`);
+                } else {
+                    let escaped = cNorm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                    patrones.push(`\\b${escaped}\\b`);
+                }
+            });
+            return patrones.length > 0 ? patrones.join('|') : "";
+        };
+ 
+        const distanciaLevenshtein = (a, b) => {
+            if(a.length == 0) return b.length; 
+            if(b.length == 0) return a.length; 
+            var matrix = [];
+            for(var i = 0; i <= b.length; i++) matrix[i] = [i];
+            for(var j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for(var i = 1; i <= b.length; i++){
+                for(var j = 1; j <= a.length; j++){
+                    if(b.charAt(i-1) == a.charAt(j-1)) matrix[i][j] = matrix[i-1][j-1];
+                    else matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, Math.min(matrix[i][j-1] + 1, matrix[i-1][j] + 1));
                 }
             }
-
-            processBtn.textContent = "Iniciar levantado";
-            processBtn.disabled = false;
-            processBtn.classList.remove('opacity-75', 'cursor-not-allowed');
-            
-            if (generatedFiles.length > 0) {
-                downloadBtn.classList.remove('hidden');
-                addLog(`PROCESO COMPLETADO. ${generatedFiles.length} archivos generados con éxito.`, "success");
+            return matrix[b.length][a.length];
+        };
+ 
+        // FIX: leerArchivosCambios ahora maneja CSV correctamente con detección de tipo
+        const leerArchivosCambios = async (archivosFiles, pdfName) => {
+            let dfList = [];
+            let pdfNameClean = pdfName.toLowerCase().replace('.pdf', '').replace(/^\d+\s*/, ''); 
+            const palabrasClavePdf = pdfNameClean.split(/\s+/).filter(w => w.length > 2);
+ 
+            for (const file of archivosFiles) {
+                const buffer = await file.arrayBuffer();
+                // FIX: detección correcta de tipo de archivo para XLSX vs CSV
+                const esCSV = file.name.toLowerCase().endsWith('.csv');
+                const workbook = esCSV
+                    ? XLSX.read(new Uint8Array(buffer), {type: 'array', raw: true})
+                    : XLSX.read(new Uint8Array(buffer), {type: 'array'});
+ 
+                let sheetFound = false;
+                
+                for (const sheet of workbook.SheetNames) {
+                    let sheetClean = sheet.toLowerCase().trim();
+                    let matchEncontrado = false;
+ 
+                    for (const palabra of palabrasClavePdf) {
+                        if (sheetClean.includes(palabra) || palabra.includes(sheetClean)) {
+                            matchEncontrado = true; break;
+                        }
+                        const umbral = palabra.length <= 5 ? 1 : 2;
+                        if (distanciaLevenshtein(palabra, sheetClean) <= umbral) {
+                            matchEncontrado = true; break;
+                        }
+                    }
+ 
+                    if (matchEncontrado) {
+                        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[sheet], {header: 1, defval: ""});
+                        if(rows.length > 0) dfList.push(rows);
+                        sheetFound = true;
+                    }
+                }
+ 
+                if (!sheetFound) {
+                    let fileNameClean = file.name.toLowerCase().replace('.csv', '').replace('.xlsx', '').trim();
+                    let matchEncontrado = false;
+                    for (const palabra of palabrasClavePdf) {
+                        if (fileNameClean.includes(palabra) || palabra.includes(fileNameClean)) {
+                            matchEncontrado = true; break;
+                        }
+                        const umbral = palabra.length <= 5 ? 1 : 2;
+                        if (distanciaLevenshtein(palabra, fileNameClean) <= umbral) {
+                            matchEncontrado = true; break;
+                        }
+                    }
+ 
+                    if (matchEncontrado) {
+                        // FIX: defval: "" para evitar celdas undefined que causaban errores silenciosos
+                        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1, defval: ""});
+                        if(rows.length > 0) dfList.push(rows);
+                    }
+                }
             }
-        });
-
-        downloadBtn.addEventListener('click', () => {
-            let zip = new JSZip();
-            generatedFiles.forEach(f => zip.file(f.name, f.content));
-            zip.generateAsync({type:"blob"}).then(c => saveAs(c, "Archivos_Procesados.zip"));
-        });
+            return dfList;
+        };
+ 
+        const App = () => {
+            const [pdfsData, setPdfsData] = useState([]);
+            const [changesData, setChangesData] = useState([]);
+            const [isProcessing, setIsProcessing] = useState(false);
+            const [logs, setLogs] = useState([]);
+            const [report, setReport] = useState(null);
+ 
+            const fileInputPdfRef = useRef(null);
+            const fileInputChangesRef = useRef(null);
+ 
+            const addLog = (msg) => setLogs(prev => [...prev, msg]);
+ 
+            const handlePdfUpload = (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+                setPdfsData(prev => [...prev, ...files]);
+                addLog(`📄 ${files.length} PDF(s) preparado(s).`);
+                e.target.value = null; 
+            };
+ 
+            const handleChangesUpload = (e) => {
+                const files = Array.from(e.target.files);
+                if (files.length === 0) return;
+                setChangesData(prev => [...prev, ...files]);
+                addLog(`📊 ${files.length} archivo(s) de cambios preparado(s).`);
+                e.target.value = null; 
+            };
+ 
+            const removePdf = (index) => setPdfsData(prev => prev.filter((_, i) => i !== index));
+            const removeChangeFile = (index) => setChangesData(prev => prev.filter((_, i) => i !== index));
+ 
+            const handleAudit = async () => {
+                if (pdfsData.length === 0 || changesData.length === 0) {
+                    alert("Por favor, subí al menos un PDF y un archivo de Excel/CSV con los cambios.");
+                    return;
+                }
+ 
+                setIsProcessing(true); setLogs([]); setReport(null);
+                
+                try {
+                    addLog("⚙️ Cargando algoritmos de validación...");
+                    let patronColores = obtenerPatronColores();
+                    
+                    let patronDinamico = `\\b\\d{1,3}\\s+(?!al\\b|y\\b)[a-záéíóúñ]+(?:\\s+(?!al\\b|y\\b)[a-záéíóúñ]+)?\\b`;
+                    let patronFinalCombinado = patronColores ? `(?:${patronDinamico}|${patronColores})` : patronDinamico;
+                    
+                    // FIX PRINCIPAL: pre-cachear todos los PDFs para no re-parsearlos en cada iteración
+                    addLog("⏳ Pre-procesando PDFs...");
+                    const pdfCache = new Map();
+                    for (const pdfFile of pdfsData) {
+                        try {
+                            pdfCache.set(pdfFile.name, await extraerTextoPdf(pdfFile));
+                        } catch (err) {
+                            addLog(`⚠️ Error leyendo ${pdfFile.name}: ${err.message}`);
+                            pdfCache.set(pdfFile.name, { crudo: "", normalizado: "" });
+                        }
+                    }
+ 
+                    let globalReport = [];
+                    let totalAlerts = 0;
+ 
+                    for (const pdfFile of pdfsData) {
+                        addLog(`🔍 Analizando: ${pdfFile.name}...`);
+                        // Usar caché en vez de re-parsear
+                        const dataExtraida = pdfCache.get(pdfFile.name);
+                        const textoPdf = dataExtraida.normalizado;
+ 
+                        const dfList = await leerArchivosCambios(changesData, pdfFile.name);
+                        
+                        if (dfList.length === 0) {
+                            globalReport.push(`\n[ ${pdfFile.name} ]\n⚠️ No se encontraron datos para este catálogo en los Excels subidos.`);
+                            continue;
+                        }
+ 
+                        let erroresEncontrados = [];
+ 
+                        for (const rows of dfList) {
+                            for (let r = 1; r < rows.length; r++) {
+                                const row = rows[r];
+                                if (!row || row.length === 0) continue;
+                                
+                                let codigo = String(row[0] || "").trim();
+                                if (!codigo || codigo.toLowerCase() === 'nan' || codigo.toLowerCase() === 'codigo') continue;
+ 
+                                let cambiosCelda = "";
+                                for (let i = 1; i < row.length; i++) {
+                                    let celda = String(row[i] || "").trim();
+                                    if (celda && celda.toLowerCase() !== 'nan') cambiosCelda += celda + "\n";
+                                }
+                                cambiosCelda = cambiosCelda.trim();
+                                
+                                let codigoNorm = normalizarTexto(codigo);
+                                let idxCodigo = textoPdf.indexOf(codigoNorm);
+                                let cambiosLower = cambiosCelda.toLowerCase();
+ 
+                                const esEliminacion = cambiosLower.includes('fuera') || cambiosLower.includes('eliminar') || cambiosLower.includes('borrar') || cambiosLower.includes('quitar');
+                                if (esEliminacion) {
+                                    if (idxCodigo !== -1) erroresEncontrados.push(`${codigo} - ❌ Revisar: Se pidió eliminar pero el código AÚN está en el PDF`);
+                                    continue;
+                                }
+                                if (cambiosLower.includes('dummy')) {
+                                    if (idxCodigo === -1) erroresEncontrados.push(`${codigo} - ❌ Revisar: Dice 'Info en dummy' pero el código NO está en el PDF`);
+                                    continue;
+                                }
+ 
+                                const regexPasarA = /(?:pasar a|mover a|cambiar a)\s+([a-záéíóúñ]+)/i;
+                                const matchPasarA = cambiosLower.match(regexPasarA);
+                                
+                                if (matchPasarA) {
+                                    const seccionDestino = matchPasarA[1].trim();
+                                    let encontradoEnDestino = false;
+                                    let pdfDestinoSubido = false;
+                                    
+                                    for (const otroPdf of pdfsData) {
+                                        const nombreOtroPdf = otroPdf.name.toLowerCase();
+                                        if (nombreOtroPdf.includes(seccionDestino)) {
+                                            pdfDestinoSubido = true;
+                                            // FIX: usar caché en vez de re-parsear
+                                            const datosOtroPdf = pdfCache.get(otroPdf.name);
+                                            if (datosOtroPdf && datosOtroPdf.normalizado.includes(codigoNorm)) {
+                                                encontradoEnDestino = true; break;
+                                            }
+                                        }
+                                    }
+                                    
+                                    if (!pdfDestinoSubido) erroresEncontrados.push(`${codigo} - ❌ No se pudo validar si se paso a ${seccionDestino} porque no se detecto el pdf de ${seccionDestino}`);
+                                    else if (!encontradoEnDestino) erroresEncontrados.push(`${codigo} - ❌ Revisar: Se solicitó pasar a '${seccionDestino}' pero NO se encontró en ${seccionDestino}`);
+                                    else if (idxCodigo !== -1) erroresEncontrados.push(`${codigo} - ❌ Revisar: Se pasó a '${seccionDestino}' pero el código AÚN está en este PDF`);
+                                    
+                                    if (cambiosCelda.trim().toLowerCase() === matchPasarA[0]) continue;
+                                }
+ 
+                                if (idxCodigo === -1) {
+                                    let encontradoEnOtroLado = false;
+                                    for (const otroPdf of pdfsData) {
+                                        if (otroPdf.name === pdfFile.name) continue;
+                                        // FIX: usar caché en vez de re-parsear
+                                        const datosOtroPdf = pdfCache.get(otroPdf.name);
+                                        if (datosOtroPdf && datosOtroPdf.normalizado.includes(codigoNorm)) { encontradoEnOtroLado = true; break; }
+                                    }
+                                    if (!encontradoEnOtroLado && !matchPasarA) erroresEncontrados.push(`${codigo} - ❌ No se encontro el codigo en ningun PDF`);
+                                    else if (!matchPasarA) erroresEncontrados.push(`${codigo} - ❌ El código no aparece en este PDF`);
+                                    continue;
+                                }
+ 
+                                let restoPdf = textoPdf.substring(idxCodigo + codigoNorm.length);
+                                let matchNextCode = restoPdf.match(/\b[a-z]{2,3}\d{4,5}\b/i);
+                                // FIX: blockSize aumentado a 300 (era 150, muy pequeño para productos con muchos colores)
+                                let blockSize = 300; 
+                                if (matchNextCode && matchNextCode.index > 5 && matchNextCode.index < 400) {
+                                    blockSize = codigoNorm.length + matchNextCode.index;
+                                }
+                                let bloquePdf = textoPdf.substring(idxCodigo, idxCodigo + blockSize);
+ 
+                                let preciosAdl = [...cambiosCelda.matchAll(/(?:q\.?\s*)(\d+)/gi)].map(m => m[1]);
+                                for (let precio of preciosAdl) {
+                                    let regexPrecio = new RegExp(`q\\.?\\s*${precio}\\b`, 'i');
+                                    if (!regexPrecio.test(bloquePdf)) erroresEncontrados.push(`${codigo} - ❌ Precio no cuadra: Q.${precio}`);
+                                }
+ 
+                                let cambiosCeldaSinPrecio = cambiosCelda.replace(/q\.?\s*\d+/gi, '').trim();
+                                
+                                cambiosCeldaSinPrecio = cambiosCeldaSinPrecio.replace(/\b(?:agregar|añadir|poner|incluir)\b/gi, '').trim();
+                                cambiosCeldaSinPrecio = cambiosCeldaSinPrecio.replace(/(\d+)([a-zA-ZñÑáéíóúÁÉÍÓÚ]+)/g, '$1 $2');
+ 
+                                let regexColoresSplit = new RegExp(`(${patronFinalCombinado})`, 'gi');
+                                cambiosCeldaSinPrecio = cambiosCeldaSinPrecio.replace(regexColoresSplit, '\n$1');
+ 
+                                let lineasCambio = cambiosCeldaSinPrecio.split('\n');
+                                let lineasFaltantes = [];
+ 
+                                for (let linea of lineasCambio) {
+                                    let lineaNorm = normalizarTexto(linea);
+                                    if (!lineaNorm) continue;
+ 
+                                    let regexSoloColor = new RegExp(`^(${patronFinalCombinado})$`, 'i');
+                                    let esSoloColor = regexSoloColor.test(lineaNorm);
+ 
+                                    let matchNumColor = lineaNorm.match(/^(\d{1,3})\s+(.+)/);
+                                    let encontradoEnPdf = false;
+                                    
+                                    // FIX: bloqueAmpliado también aumentado para mayor cobertura
+                                    let bloqueAmpliado = textoPdf.substring(idxCodigo, idxCodigo + 600);
+ 
+                                    let bloquePdfParaBusqueda = bloquePdf.replace(/\bq\.?\s*(\d+)\b/gi, '$1');
+                                    let bloqueAmpliadoParaBusqueda = bloqueAmpliado.replace(/\bq\.?\s*(\d+)\b/gi, '$1');
+ 
+                                    if (matchNumColor) {
+                                        let restoLinea = matchNumColor[2].replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                                        let regexBuscarEnPdf = new RegExp(`(?:\\d{1,3}\\s+)?${restoLinea}`, 'i');
+                                        
+                                        if (regexBuscarEnPdf.test(bloquePdfParaBusqueda)) {
+                                            encontradoEnPdf = true;
+                                        } else if (/\d/.test(restoLinea) && regexBuscarEnPdf.test(bloqueAmpliadoParaBusqueda)) {
+                                            encontradoEnPdf = true;
+                                        }
+                                    } else {
+                                        if (bloquePdfParaBusqueda.includes(lineaNorm)) {
+                                            encontradoEnPdf = true;
+                                        } else if (/\d/.test(lineaNorm) && bloqueAmpliadoParaBusqueda.includes(lineaNorm)) {
+                                            encontradoEnPdf = true;
+                                        }
+                                    }
+ 
+                                    if (!encontradoEnPdf) {
+                                        let lineaLimpia = linea.replace(/[,:\-\s]+$/, '').trim();
+                                        if (lineaLimpia) {
+                                            lineaLimpia = lineaLimpia.charAt(0).toUpperCase() + lineaLimpia.slice(1);
+                                            let regexEmbellecedor = new RegExp(`^(${patronFinalCombinado})\\s*[\\/\\-:]?\\s*`, 'i');
+                                            lineaLimpia = lineaLimpia.replace(regexEmbellecedor, (match, p1) => {
+                                                let words = p1.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+                                                return esSoloColor ? words.join(' ') : words.join(' ') + ' / ';
+                                            });
+                                            lineasFaltantes.push(lineaLimpia);
+                                        }
+                                    }
+                                }
+ 
+                                if (lineasFaltantes.length > 0) erroresEncontrados.push(`${codigo} - ❌ Revisar: ${lineasFaltantes.join(', ')}`);
+                            }
+                        }
+ 
+                        if (erroresEncontrados.length > 0) {
+                            globalReport.push(`\n[ ${pdfFile.name} ]\n` + erroresEncontrados.join('\n'));
+                            totalAlerts += erroresEncontrados.length;
+                        } else {
+                            globalReport.push(`\n[ ${pdfFile.name} ]\n✅ Validado correctamente. Sin errores.`);
+                        }
+                    }
+ 
+                    if (globalReport.length > 0) {
+                        setReport(["REPORTE DE VALIDACIÓN", "=======================", ...globalReport]);
+                        addLog(`✅ ¡Proceso completado! Se encontraron ${totalAlerts} alertas.`);
+                    }
+ 
+                } catch (error) {
+                    console.error(error);
+                    addLog(`❌ Error del sistema: ${error.message}`);
+                } finally {
+                    setIsProcessing(false);
+                }
+            };
+ 
+            // FIX: descarga usando encodeURIComponent para evitar problemas con caracteres especiales
+            const downloadReport = () => {
+                if (!report) return;
+                const contenido = report.join('\n');
+                const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'Reporte_Validacion.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                // FIX: pequeño delay antes de revocar para garantizar que el navegador terminó la descarga
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            };
+ 
+            return (
+                <div className="min-h-screen bg-[#F8F9FA] text-[#111111] p-4 sm:p-6 font-sans">
+                    <div className="max-w-3xl mx-auto pt-2 md:pt-4">
+                        
+                        {/* Header Compacto */}
+                        <header className="mb-6 flex flex-col gap-2">
+                            <h1 className="text-3xl md:text-4xl font-extrabold text-[#111111] tracking-tight flex items-center gap-3">
+                                Validación 
+                                <span className="w-8 h-8 md:w-10 md:h-10 bg-[#D4FF26] rounded-full flex items-center justify-center shrink-0 shadow-sm">
+                                    <svg className="w-4 h-4 md:w-5 md:h-5 text-[#111111]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
+                                </span>
+                            </h1>
+                            <div>
+                                <span className="bg-[#111111] text-white px-3 py-1.5 rounded-full text-xs font-semibold shadow-sm whitespace-nowrap inline-block">
+                                    By Mynor Garcia
+                                </span>
+                            </div>
+                        </header>
+ 
+                        {/* Tarjetas Subida de Archivos */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
+                            
+                            {/* Tarjeta PDF */}
+                            <div 
+                                className="bg-white rounded-[1.25rem] p-5 cursor-pointer hover:border-gray-300 border border-transparent transition-all card-shadow relative"
+                                onClick={() => fileInputPdfRef.current.click()}
+                            >
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-sm neon-accent"></div>
+                                        <span className="font-semibold text-xs text-gray-500">Documentos PDF</span>
+                                    </div>
+                                    <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-[#111111]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-end gap-2 mb-1">
+                                    <h3 className="text-3xl font-bold leading-none text-[#111111] tracking-tighter">{pdfsData.length}</h3>
+                                    <span className="neon-accent px-1.5 py-0.5 rounded text-[10px] font-bold mb-0.5">Archivos</span>
+                                </div>
+                                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-3">Catálogos base a revisar</p>
+                                
+                                <input ref={fileInputPdfRef} type="file" accept=".pdf" multiple className="hidden" onChange={handlePdfUpload} />
+                                
+                                {pdfsData.length > 0 && (
+                                    <div className="flex flex-col gap-1 mt-2 pt-2 border-t border-gray-100">
+                                        {pdfsData.map((pdf, idx) => (
+                                            <div key={idx} className="flex justify-between items-center text-xs font-medium text-gray-600 bg-gray-50 px-2.5 py-1.5 rounded-lg">
+                                                <span className="truncate pr-3">{pdf.name}</span>
+                                                <button onClick={(e) => { e.stopPropagation(); removePdf(idx); }} className="hover:text-red-500 font-bold shrink-0">×</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+ 
+                            {/* Tarjeta Excel */}
+                            <div 
+                                className="bg-white rounded-[1.25rem] p-5 cursor-pointer hover:border-gray-300 border border-transparent transition-all card-shadow relative"
+                                onClick={() => fileInputChangesRef.current.click()}
+                            >
+                                <div className="flex justify-between items-start mb-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 rounded-sm neon-accent"></div>
+                                        <span className="font-semibold text-xs text-gray-500">Archivos Excel / CSV</span>
+                                    </div>
+                                    <div className="w-8 h-8 rounded-full bg-gray-50 flex items-center justify-center">
+                                        <svg className="w-4 h-4 text-[#111111]" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4"></path></svg>
+                                    </div>
+                                </div>
+                                
+                                <div className="flex items-end gap-2 mb-1">
+                                    <h3 className="text-3xl font-bold leading-none text-[#111111] tracking-tighter">{changesData.length}</h3>
+                                    <span className="neon-accent px-1.5 py-0.5 rounded text-[10px] font-bold mb-0.5">Archivos</span>
+                                </div>
+                                <p className="text-gray-400 text-[10px] font-bold uppercase tracking-widest mb-3">Cambios solicitados</p>
+                                
+                                <input ref={fileInputChangesRef} type="file" accept=".xlsx,.csv" multiple className="hidden" onChange={handleChangesUpload} />
+ 
+                                {changesData.length > 0 && (
+                                    <div className="flex flex-col gap-1 mt-2 pt-2 border-t border-gray-100">
+                                        {changesData.map((file, idx) => (
+                                            <div key={idx} className="flex justify-between items-center text-xs font-medium text-gray-600 bg-gray-50 px-2.5 py-1.5 rounded-lg">
+                                                <span className="truncate pr-3">{file.name}</span>
+                                                <button onClick={(e) => { e.stopPropagation(); removeChangeFile(idx); }} className="hover:text-red-500 font-bold shrink-0">×</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+ 
+                        {/* Barra de Acción */}
+                        <div className="bg-white rounded-[1.25rem] p-4 md:p-5 card-shadow mb-5 flex flex-col sm:flex-row items-center justify-between gap-4 border border-gray-100">
+                            <div className="text-center sm:text-left">
+                                <h3 className="text-lg font-bold text-[#111111] mb-0.5">Ejecutar Auditoría</h3>
+                                <p className="text-xs text-gray-500">Procesar documentos cruzando catálogos vs Excel.</p>
+                            </div>
+                            <button 
+                                onClick={handleAudit} 
+                                disabled={isProcessing}
+                                className={`bg-[#111111] text-white px-6 py-2.5 rounded-full font-bold text-xs flex items-center justify-center gap-2 transition-transform hover:scale-[1.02] active:scale-[0.98] w-full sm:w-auto shadow-sm shrink-0 ${isProcessing ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                                {isProcessing ? (
+                                    <><svg className="animate-spin h-4 w-4 text-[#D4FF26]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Procesando...</>
+                                ) : 'Iniciar Análisis'}
+                            </button>
+                        </div>
+ 
+                        {/* Logs */}
+                        {logs.length > 0 && !report && (
+                            <div className="bg-white rounded-[1.25rem] p-4 mb-4 card-shadow border border-gray-100">
+                                 <div className="font-mono text-[11px] text-gray-500 space-y-1">
+                                    {logs.map((log, i) => <div key={i}>{log}</div>)}
+                                </div>
+                            </div>
+                        )}
+ 
+                        {/* Reporte Final */}
+                        {report && (
+                            <div className="bg-white rounded-[1.25rem] p-5 md:p-6 card-shadow border-t-4 border-[#D4FF26]">
+                                <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-5">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-[#D4FF26] flex items-center justify-center shrink-0">
+                                            <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                        </div>
+                                        <h3 className="text-lg font-bold text-[#111111]">Reporte Generado</h3>
+                                    </div>
+                                    <button 
+                                        onClick={downloadReport}
+                                        className="bg-gray-100 text-[#111111] px-4 py-2 rounded-full text-xs font-bold hover:bg-gray-200 transition-colors shrink-0 w-full sm:w-auto text-center"
+                                    >
+                                        Exportar TXT
+                                    </button>
+                                </div>
+                                <div className="bg-gray-50 rounded-xl p-4 max-h-[400px] overflow-y-auto custom-scrollbar border border-gray-100">
+                                    <pre className="text-[#111111] font-mono text-xs leading-relaxed whitespace-pre-wrap">
+                                        {report.join('\n')}
+                                    </pre>
+                                </div>
+                            </div>
+                        )}
+ 
+                    </div>
+                </div>
+            );
+        };
+ 
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
     </script>
 </body>
 </html>
