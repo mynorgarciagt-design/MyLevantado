@@ -375,12 +375,12 @@
                                     
                                     if (esPrenda) {
                                         let prendaVal = cleanVal(grupo[0].prenda) || cleanVal(grupo[0].descripcion) || cleanVal(grupo[0].categoria);
-                                        if (prendaVal) textoFinal += `${prendaVal.toUpperCase()}\n`;
+                                        if (prendaVal) textoFinal += `${prendaVal}\n`;
                                     } else if (esVarios) {
                                         let nom = cleanVal(grupo[0].nombre_producto);
-                                        if (nom) textoFinal += `${nom.toUpperCase()}\n`;
+                                        if (nom) textoFinal += `${nom}\n`;
                                         let desc = cleanVal(grupo[0].descripcion);
-                                        if (desc) textoFinal += `${desc.toUpperCase()}\n`;
+                                        if (desc) textoFinal += `${desc}\n`;
                                     }
 
                                     if (esOferta) {
