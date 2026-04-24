@@ -39,90 +39,78 @@
 
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
+        // LISTA DE COLORES ACTUALIZADA Y EXPANDIDA
         const COLORES_PREDEFINIDOS = [
-            "01 Negro", "02 Cafe", "03 Camel", "04 Marino", "05 Azul",
-            "06 Rojo", "07 Blanco", "08 Gris", "09 Plata", "10 Oro",
-            "11 Miel", "12 Beige", "13 Vino", "14 Mostaza", "15 Verde",
-            "16 Rosa", "17 Fuchsia", "18 Morado", "19 Lila", "20 Amarillo",
-            "21 Naranja", "22 Celeste", "23 Turquesa", "24 Hueso", "25 Arena",
-            "26 Taupe", "27 Cobre", "28 Bronce", "29 Plomo", "30 Transparente",
-            "31 Multicolor", "32 Estampado", "33 Leopardo", "34 Charol", "35 Gamuza",
-            "36 Lona", "37 Rosado", "38 Tan"
+            "negro nubuk", "cafe camel", "vino camel", "negro camel", "tan jeans", "came jeans",
+            "lona negro", "negro cromado", "blanco plata", "blanco celeste", "blanco rosado", "azul claro",
+            "negro plata", "negro dorado", "blanco dorado", "verde olivo", "verde manzana", "palo rosa",
+            "amarillo claro", "verde lima", "verde musgo", "gris oscuro", "blanco azul", "azul marino",
+            "negro", "cafe", "camel", "marino", "azul", "rojo", "blanco", "gris", "plata", "oro",
+            "miel", "beige", "vino", "mostaza", "verde", "rosa", "fuchsia", "fuscia", "fucsia", "morado",
+            "lila", "amarillo", "naranja", "celeste", "turquesa", "turqueza", "hueso", "arena", "taupe",
+            "cobre", "bronce", "plomo", "transparente", "multicolor", "estampado", "leopardo", "charol",
+            "gamuza", "lona", "rosado", "tan", "marron", "mentol purificante", "hongo", "cristal",
+            "dorado", "champagne", "gena", "vainilla", "corinto", "musgo", "nuez", "perla", "kaki", "caqui",
+            "natural", "crema", "aqua", "trigo", "floral", "salmon", "pistacho", "curry", "coral",
+            "chocolate", "ladrillo", "marfil", "melon", "acero", "cognac", "uva", "purpura",
+            "tabaco", "cocoa", "pera", "exotic", "manzanilla", "aloe"
         ];
+
+        const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
         const normalizarTexto = (texto) => {
             if (!texto) return "";
             let t = String(texto).toLowerCase();
-            t = t.replace(/\s*\/\s*/g, '/');        
-            t = t.replace(/[\-\:]/g, ' ');          
-            t = t.replace(/\bal\b/g, ' ');          
-            t = t.replace(/\by\b/g, ',');           
-            t = t.replace(/\s*,\s*/g, ',');         
-            t = t.replace(/\s+/g, ' ').trim();      
+            // Quitar tildes para comparación robusta (café == cafe, etc.)
+            t = t.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+            // Normalizar separadores de colores compuestos a espacio simple
+            t = t.replace(/\s*[\/\-\:]\s*/g, ' ');
+            t = t.replace(/\bal\b/g, ' ');
+            t = t.replace(/\by\b/g, ' ');
+            t = t.replace(/,/g, ' ');
+            t = t.replace(/\s+/g, ' ').trim();
             return t;
         };
 
-        const escapeRegExp = (string) => string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-
         const extraerTextoPdf = async (file) => {
             const buffer = await file.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument({data: new Uint8Array(buffer)}).promise;
+            const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(buffer) }).promise;
             let textoCompleto = "";
             for (let i = 1; i <= pdf.numPages; i++) {
                 const page = await pdf.getPage(i);
                 const textContent = await page.getTextContent();
-                
                 let pageText = "";
                 let lastY = -1;
-                
                 for (let item of textContent.items) {
-                    if (lastY !== -1 && Math.abs(lastY - item.transform[5]) > 2) {
-                        pageText += "\n";
-                    }
+                    if (lastY !== -1 && Math.abs(lastY - item.transform[5]) > 2) pageText += "\n";
                     pageText += item.str;
                     lastY = item.transform[5];
                 }
                 textoCompleto += pageText + "\n";
             }
-            
-            textoCompleto = textoCompleto.replace(/\b0\.\s*(\d+)/gi, 'Q. $1');
-            textoCompleto = textoCompleto.replace(/(\d{2})\.(\d{2})/g, '$1,$2');
-
             return { crudo: textoCompleto, normalizado: normalizarTexto(textoCompleto) };
         };
 
         const obtenerPatronColores = () => {
             let colorList = [...COLORES_PREDEFINIDOS];
             colorList.sort((a, b) => b.length - a.length);
-
-            let patrones = [];
-            colorList.forEach(c => {
-                let cNorm = c.trim().toLowerCase();
-                let match = cNorm.match(/^(\d+)\s+(.+)$/);
-                if (match) {
-                    let num = match[1];
-                    let nombre = escapeRegExp(match[2]); 
-                    patrones.push(`\\b0*${num}\\s+${nombre}\\b`);
-                } else {
-                    let escaped = escapeRegExp(cNorm);
-                    patrones.push(`\\b${escaped}\\b`);
-                }
+            let patrones = colorList.map(c => {
+                let norm = normalizarTexto(c);
+                return `(?:\\b\\d{1,3}\\s+)?\\b${escapeRegExp(norm)}\\b`;
             });
             return patrones.length > 0 ? patrones.join('|') : "";
         };
 
         const distanciaLevenshtein = (a, b) => {
-            if(a.length == 0) return b.length; 
-            if(b.length == 0) return a.length; 
-            var matrix = [];
-            for(var i = 0; i <= b.length; i++) matrix[i] = [i];
-            for(var j = 0; j <= a.length; j++) matrix[0][j] = j;
-            for(var i = 1; i <= b.length; i++){
-                for(var j = 1; j <= a.length; j++){
-                    if(b.charAt(i-1) == a.charAt(j-1)) matrix[i][j] = matrix[i-1][j-1];
-                    else matrix[i][j] = Math.min(matrix[i-1][j-1] + 1, Math.min(matrix[i][j-1] + 1, matrix[i-1][j] + 1));
-                }
-            }
+            if (a.length === 0) return b.length;
+            if (b.length === 0) return a.length;
+            const matrix = Array.from({ length: b.length + 1 }, (_, i) => [i]);
+            for (let j = 0; j <= a.length; j++) matrix[0][j] = j;
+            for (let i = 1; i <= b.length; i++)
+                for (let j = 1; j <= a.length; j++)
+                    matrix[i][j] = b[i-1] === a[j-1]
+                        ? matrix[i-1][j-1]
+                        : Math.min(matrix[i-1][j-1] + 1, matrix[i][j-1] + 1, matrix[i-1][j] + 1);
             return matrix[b.length][a.length];
         };
 
@@ -138,13 +126,8 @@
                     ? XLSX.read(new Uint8Array(buffer), {type: 'array', raw: true})
                     : XLSX.read(new Uint8Array(buffer), {type: 'array'});
 
-                if (esCSV) {
-                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1, defval: ""});
-                    if(rows.length > 0) dfList.push(rows);
-                    continue; 
-                }
-
                 let sheetFound = false;
+                
                 for (const sheet of workbook.SheetNames) {
                     let sheetClean = sheet.toLowerCase().trim();
                     let matchEncontrado = false;
@@ -167,7 +150,7 @@
                 }
 
                 if (!sheetFound) {
-                    let fileNameClean = file.name.toLowerCase().replace('.xlsx', '').trim();
+                    let fileNameClean = file.name.toLowerCase().replace('.csv', '').replace('.xlsx', '').trim();
                     let matchEncontrado = false;
                     for (const palabra of palabrasClavePdf) {
                         if (fileNameClean.includes(palabra) || palabra.includes(fileNameClean)) {
@@ -193,7 +176,7 @@
             const [changesData, setChangesData] = useState([]);
             const [isProcessing, setIsProcessing] = useState(false);
             const [logs, setLogs] = useState([]);
-            const [reportData, setReportData] = useState(null); // Ahora es un Array de objetos para la tabla Excel
+            const [report, setReport] = useState(null);
 
             const fileInputPdfRef = useRef(null);
             const fileInputChangesRef = useRef(null);
@@ -225,13 +208,13 @@
                     return;
                 }
 
-                setIsProcessing(true); setLogs([]); setReportData(null);
+                setIsProcessing(true); setLogs([]); setReport(null);
                 
                 try {
                     addLog("⚙️ Cargando algoritmos de validación...");
-                    let patronColores = obtenerPatronColores();
                     
-                    let patronDinamico = `\\b\\d{1,3}\\s+(?!al\\b|y\\b)[a-záéíóúñ]+(?:\\s+(?!al\\b|y\\b)[a-záéíóúñ]+)?\\b`;
+                    let patronColores = obtenerPatronColores();
+                    let patronDinamico = `\\b\\d{1,3}\\s+(?!al\\b|y\\b)[a-z]+(?:\\s+(?!al\\b|y\\b)[a-z]+)?\\b`;
                     let patronFinalCombinado = patronColores ? `(?:${patronDinamico}|${patronColores})` : patronDinamico;
                     
                     addLog("⏳ Pre-procesando PDFs...");
@@ -245,8 +228,11 @@
                         }
                     }
 
-                    let globalReportList = [];
+                    let globalReport = [];
+                    let totalAlerts = 0;
+                    
                     const codigosProcesadosGlobal = new Set();
+                    const codigosCompletamenteNoEncontrados = new Set();
 
                     for (const pdfFile of pdfsData) {
                         addLog(`🔍 Analizando: ${pdfFile.name}...`);
@@ -256,8 +242,11 @@
                         const dfList = await leerArchivosCambios(changesData, pdfFile.name);
                         
                         if (dfList.length === 0) {
+                            globalReport.push(`\n[ ${pdfFile.name} ]\nNo se encontraron datos para este catálogo en los Excels subidos.`);
                             continue;
                         }
+
+                        let erroresEncontrados = [];
 
                         for (const rows of dfList) {
                             for (let r = 1; r < rows.length; r++) {
@@ -270,7 +259,6 @@
                                 let codigosSeparados = codigoCelda.split(/[\/\\]+/).map(c => c.trim()).filter(c => c);
 
                                 for (let codigo of codigosSeparados) {
-                                    
                                     let cambiosCelda = "";
                                     for (let i = 1; i < row.length; i++) {
                                         let celda = String(row[i] || "").trim();
@@ -279,16 +267,17 @@
                                     cambiosCelda = cambiosCelda.trim();
                                     
                                     let codigoNorm = normalizarTexto(codigo);
+                                    if (!codigoNorm) continue;
                                     let idxCodigo = textoPdf.indexOf(codigoNorm);
                                     let cambiosLower = cambiosCelda.toLowerCase();
-                                    let cambiosParaEsteCodigo = [];
 
+                                    let rowKey = codigoNorm + "|" + normalizarTexto(cambiosCelda);
                                     let enTodasLasSecciones = cambiosLower.includes('en todas las secciones');
-                                    if (!enTodasLasSecciones && codigosProcesadosGlobal.has(codigo)) {
+
+                                    if (!enTodasLasSecciones && codigosProcesadosGlobal.has(rowKey)) {
                                         continue; 
                                     }
 
-                                    // CASO DUPLICADO
                                     if (cambiosLower.includes('duplicado')) {
                                         let count = 0;
                                         let pos = textoPdf.indexOf(codigoNorm);
@@ -297,35 +286,46 @@
                                             pos = textoPdf.indexOf(codigoNorm, pos + 1);
                                         }
                                         if (count > 1) {
-                                            globalReportList.push({ Archivo: pdfFile.name, Codigo: codigo, Cambio: "DUPLICADO" });
+                                            erroresEncontrados.push(`${codigo} -> Se detectó DUPLICADO en el PDF (aparece ${count} veces)`);
                                         } else if (count === 0) {
-                                            globalReportList.push({ Archivo: pdfFile.name, Codigo: codigo, Cambio: "NO ENCONTRADO EN PDF" });
+                                            let encontradoEnOtro = false;
+                                            for (const otroPdf of pdfsData) {
+                                                if (otroPdf.name === pdfFile.name) continue;
+                                                const datosOtroPdf = pdfCache.get(otroPdf.name);
+                                                if (datosOtroPdf && datosOtroPdf.normalizado.includes(codigoNorm)) { encontradoEnOtro = true; break; }
+                                            }
+                                            if (!encontradoEnOtro) {
+                                                codigosCompletamenteNoEncontrados.add(`${codigo} -> NO ENCONTRADO`);
+                                            }
                                         }
-                                        if (count > 0) codigosProcesadosGlobal.add(codigo);
+                                        
+                                        if (count > 0 && !enTodasLasSecciones) codigosProcesadosGlobal.add(rowKey);
                                         continue;
                                     }
 
-                                    // CASO INSTRUCCIONES VISUALES (Fotos, colores, diseño)
                                     if (/foto|arreglar|imagen|quitar foto/i.test(cambiosLower)) {
-                                        cambiosParaEsteCodigo.push(`REVISAR DISEÑO: ${cambiosCelda.replace(/\n/g, ' ')}`);
+                                        erroresEncontrados.push(`${codigo} -> Instrucción de diseño (Revisión manual): "${cambiosCelda.replace(/\n/g, ' ')}"`);
                                     }
 
-                                    // CASO ELIMINACIÓN TOTAL (FUERA FUERA, NO HAY NADA, OFERTAS)
-                                    let esEliminacionTotal = /^(fuera fuera|no hay nada|fuera|ofertas)$/i.test(cambiosLower.replace(/[\s,.]+/g, ' '));
-                                    if (esEliminacionTotal) {
-                                        if (idxCodigo !== -1) globalReportList.push({ Archivo: pdfFile.name, Codigo: codigo, Cambio: "FUERA" });
-                                        codigosProcesadosGlobal.add(codigo);
+                                    let textoLimpioEliminacion = cambiosLower.replace(/[\s,.]+/g, ' ').trim();
+                                    const esEliminacion = /^\s*(fuera fuera|no hay nada|fuera|ofertas|eliminar|borrar|quitar)\s*$/i.test(textoLimpioEliminacion) || 
+                                                          /eliminar\s*(c[oó]digo|todo|modelo)/i.test(cambiosLower) || 
+                                                          /borrar\s*(c[oó]digo|todo|modelo)/i.test(cambiosLower);
+                                                          
+                                    if (esEliminacion) {
+                                        if (idxCodigo !== -1) erroresEncontrados.push(`${codigo} -> Se pidió eliminar todo (o es OFERTA) pero el código AÚN está en el PDF`);
+                                        if (idxCodigo !== -1 && !enTodasLasSecciones) codigosProcesadosGlobal.add(rowKey);
                                         continue;
                                     }
 
                                     if (cambiosLower.includes('dummy')) {
-                                        if (idxCodigo === -1) globalReportList.push({ Archivo: pdfFile.name, Codigo: codigo, Cambio: "NO ENCONTRADO EN PDF (Revisar Dummy)" });
+                                        if (idxCodigo === -1) erroresEncontrados.push(`${codigo} -> Dice 'Info en dummy' pero el código NO está en el PDF`);
+                                        if (idxCodigo !== -1 && !enTodasLasSecciones) codigosProcesadosGlobal.add(rowKey);
                                         continue;
                                     }
 
-                                    const regexPasarA = /(?:pasar a|mover a|cambiar a)\s+([a-záéíóúñ]+)/i;
+                                    const regexPasarA = /(?:pasar a|mover a|cambiar a|dejar(?:\s+solo)?\s+en\s+secci[oó]n)\s+([a-záéíóúñ]+)/i;
                                     const matchPasarA = cambiosLower.match(regexPasarA);
-                                    
                                     if (matchPasarA) {
                                         const seccionDestino = matchPasarA[1].trim();
                                         let encontradoEnDestino = false;
@@ -342,18 +342,16 @@
                                             }
                                         }
                                         
-                                        if (!pdfDestinoSubido || !encontradoEnDestino || idxCodigo !== -1) {
-                                            cambiosParaEsteCodigo.push(`PASAR A ${seccionDestino.toUpperCase()}`);
-                                        }
+                                        if (!pdfDestinoSubido) erroresEncontrados.push(`${codigo} -> No se pudo validar si se pasó a ${seccionDestino} porque no se detectó el PDF de ${seccionDestino}`);
+                                        else if (!encontradoEnDestino) erroresEncontrados.push(`${codigo} -> Se solicitó pasar a '${seccionDestino}' pero NO se encontró en ${seccionDestino}`);
+                                        else if (idxCodigo !== -1) erroresEncontrados.push(`${codigo} -> Se pasó a '${seccionDestino}' pero el código AÚN está en este PDF`);
                                         
-                                        if (cambiosCelda.trim().toLowerCase() === matchPasarA[0]) {
-                                            if(cambiosParaEsteCodigo.length > 0){
-                                                globalReportList.push({ Archivo: pdfFile.name, Codigo: codigo, Cambio: [...new Set(cambiosParaEsteCodigo)].join('\n') });
-                                            }
-                                            continue;
-                                        }
+                                        if (idxCodigo !== -1 && !enTodasLasSecciones) codigosProcesadosGlobal.add(rowKey);
+                                        
+                                        if (cambiosCelda.trim().toLowerCase().match(/^(?:pasar a|mover a|cambiar a|dejar(?:\s+solo)?\s+en\s+secci[oó]n)\s+[a-záéíóúñ]+$/i)) continue;
                                     }
 
+                                    // --- LÓGICA NO ENCONTRADO ---
                                     if (idxCodigo === -1) {
                                         let encontradoEnOtroLado = false;
                                         for (const otroPdf of pdfsData) {
@@ -362,40 +360,46 @@
                                             if (datosOtroPdf && datosOtroPdf.normalizado.includes(codigoNorm)) { encontradoEnOtroLado = true; break; }
                                         }
                                         
-                                        if (!encontradoEnOtroLado && !matchPasarA) {
-                                            cambiosParaEsteCodigo.push("NO ENCONTRADO EN PDF");
-                                            globalReportList.push({ Archivo: pdfFile.name, Codigo: codigo, Cambio: [...new Set(cambiosParaEsteCodigo)].join('\n') });
+                                        if (!matchPasarA) {
+                                            if (!encontradoEnOtroLado) {
+                                                codigosCompletamenteNoEncontrados.add(`${codigo} -> NO ENCONTRADO`);
+                                            }
                                         }
                                         continue;
                                     }
 
-                                    codigosProcesadosGlobal.add(codigo);
+                                    // --- SI LLEGAMOS AQUÍ, EL CÓDIGO SÍ SE ENCONTRÓ EN ESTE PDF ---
+                                    if (!enTodasLasSecciones) {
+                                        codigosProcesadosGlobal.add(rowKey);
+                                    }
 
                                     let restoPdf = textoPdf.substring(idxCodigo + codigoNorm.length);
                                     let matchNextCode = restoPdf.match(/\b[a-z]{2,3}\d{4,5}\b/i);
+                                    
                                     let blockSize = 300; 
                                     if (matchNextCode && matchNextCode.index > 5 && matchNextCode.index < 400) {
                                         blockSize = codigoNorm.length + matchNextCode.index;
                                     }
                                     let bloquePdf = textoPdf.substring(idxCodigo, idxCodigo + blockSize);
 
-                                    let preciosAdl = [...cambiosCelda.matchAll(/(?:q\.?\s*)(\d+)/gi)].map(m => m[1]);
-                                    for (let precio of preciosAdl) {
-                                        let regexPrecio = new RegExp(`q\\.?\\s*${precio}\\b`, 'i');
-                                        if (!regexPrecio.test(bloquePdf)) cambiosParaEsteCodigo.push(`Q. ${precio}`);
-                                    }
-
                                     if (cambiosLower.includes('existencias limitadas')) {
                                         if (!bloquePdf.toLowerCase().includes('existencias limitadas')) {
-                                            cambiosParaEsteCodigo.push("Existencias limitadas");
+                                            erroresEncontrados.push(`${codigo} -> No se encontró el texto "Existencias limitadas" en el PDF`);
                                         }
                                     }
 
+                                    let preciosAdl = [...cambiosCelda.matchAll(/(?:q\.?\s*)(\d+)/gi)].map(m => m[1]);
+                                    for (let precio of preciosAdl) {
+                                        let regexPrecio = new RegExp(`\\bq\\.?\\s*${precio}\\b`, 'i');
+                                        if (!regexPrecio.test(bloquePdf)) erroresEncontrados.push(`${codigo} -> Precio no cuadra: Q.${precio}`);
+                                    }
+
                                     let cambiosCeldaSinPrecio = cambiosCelda.replace(/q\.?\s*\d+/gi, '').trim();
-                                    cambiosCeldaSinPrecio = cambiosCeldaSinPrecio.replace(/en (todas las secciones|seccion de[a-záéíóúñ\s,]+)/gi, '');
-                                    cambiosCeldaSinPrecio = cambiosCeldaSinPrecio.replace(/\b(correjir|corregir|precio|cambiar a|poner|agregar|añadir|incluir|quitar|tambien|también|ambos colores|color|existencias limitadas|ofertas|marca sophia.*)\b/gi, '').trim();
-                                    cambiosCeldaSinPrecio = cambiosCeldaSinPrecio.replace(/(\d+)([a-zA-ZñÑáéíóúÁÉÍÓÚ]+)/g, '$1 $2');
+                                    cambiosCeldaSinPrecio = cambiosCeldaSinPrecio.replace(/\beliminar\s+(?:el\s+|la\s+|los\s+)?/gi, 'fuera ');
+                                    cambiosCeldaSinPrecio = cambiosCeldaSinPrecio.replace(/en (todas las secciones|secci[oó]n de[^\d]+)/gi, '');
+                                    cambiosCeldaSinPrecio = cambiosCeldaSinPrecio.replace(/\b(precio correcto|se envi[oó] en revisiones|nada que ver.*|error de cat[aá]logo|arreglar el color.*|correjir|corregir|precio|cambiar a|poner|agregar|añadir|incluir|quitar\b(?!\s*de)|tambien|también|ambos colores|color|existencias limitadas|ofertas|marca sophia.*)\b/gi, '').trim();
                                     cambiosCeldaSinPrecio = cambiosCeldaSinPrecio.replace(/foto|arreglar|imagen/gi, '').trim();
+                                    cambiosCeldaSinPrecio = cambiosCeldaSinPrecio.replace(/(\d+)([a-zA-ZñÑáéíóúÁÉÍÓÚ]+)/g, '$1 $2');
 
                                     let regexColoresSplit = new RegExp(`(${patronFinalCombinado})`, 'gi');
                                     cambiosCeldaSinPrecio = cambiosCeldaSinPrecio.replace(regexColoresSplit, '\n$1');
@@ -410,9 +414,10 @@
                                         if (/\bfuera\b/i.test(lineaNorm)) {
                                             let lineaSinFuera = lineaNorm.replace(/\bfuera\b/ig, '').trim();
                                             if (lineaSinFuera) {
-                                                let regexBuscarFuera = new RegExp(escapeRegExp(lineaSinFuera).replace(/[\s\/,\-]+/g, '[\\s\\/\\,\\-]+'), 'i');
+                                                let lineaSinFueraEscaped = escapeRegExp(lineaSinFuera);
+                                                let regexBuscarFuera = new RegExp(lineaSinFueraEscaped.replace(/\\ /g, '[\\s\\/\\,\\-]+'), 'i');
                                                 if (regexBuscarFuera.test(bloquePdf)) {
-                                                    cambiosParaEsteCodigo.push(`${lineaSinFuera} FUERA`);
+                                                    erroresEncontrados.push(`${codigo} -> Se pidió eliminar '${lineaSinFuera}' pero AÚN aparece en el PDF`);
                                                 }
                                             }
                                             continue; 
@@ -422,33 +427,23 @@
                                         let esSoloColor = regexSoloColor.test(lineaNorm);
 
                                         let matchNumColor = lineaNorm.match(/^(\d{1,3})\s+(.+)/);
+                                        let restoLinea = matchNumColor ? matchNumColor[2] : lineaNorm;
+                                        
+                                        let restoLineaEscaped = escapeRegExp(restoLinea);
+
                                         let encontradoEnPdf = false;
                                         
                                         let bloqueAmpliado = textoPdf.substring(idxCodigo, idxCodigo + 600);
-
+                                        
                                         let bloquePdfParaBusqueda = bloquePdf.replace(/\bq\.?\s*(\d+)\b/gi, '$1');
                                         let bloqueAmpliadoParaBusqueda = bloqueAmpliado.replace(/\bq\.?\s*(\d+)\b/gi, '$1');
 
-                                        if (matchNumColor) {
-                                            let num = matchNumColor[1];
-                                            let restoLinea = matchNumColor[2].trim();
-                                            let flexibleResto = escapeRegExp(restoLinea).replace(/[\s\/,\-]+/g, '[\\s\\/\\,\\-]+');
-                                            let regexBuscarEnPdf = new RegExp(`(?:\\d{1,3}[\\s\\/\\,\\-]+)?${flexibleResto}`, 'i');
-                                            
-                                            if (regexBuscarEnPdf.test(bloquePdfParaBusqueda)) {
-                                                encontradoEnPdf = true;
-                                            } else if (/[a-z\d]/i.test(restoLinea) && regexBuscarEnPdf.test(bloqueAmpliadoParaBusqueda)) {
-                                                encontradoEnPdf = true;
-                                            }
-                                        } else {
-                                            let flexiblePattern = escapeRegExp(lineaNorm).replace(/[\s\/,\-]+/g, '[\\s\\/\\,\\-]+');
-                                            let regexBuscarLinea = new RegExp(flexiblePattern, 'i');
-
-                                            if (regexBuscarLinea.test(bloquePdfParaBusqueda)) {
-                                                encontradoEnPdf = true;
-                                            } else if (/[a-z\d]/i.test(lineaNorm) && regexBuscarLinea.test(bloqueAmpliadoParaBusqueda)) {
-                                                encontradoEnPdf = true;
-                                            }
+                                        let regexBuscarEnPdf = new RegExp(`(?:\\d{1,3}\\s+)?${restoLineaEscaped.replace(/\\ /g, '[\\s\\/\\-]+')}`, 'i');
+                                        
+                                        if (regexBuscarEnPdf.test(bloquePdfParaBusqueda)) {
+                                            encontradoEnPdf = true;
+                                        } else if (/\d/.test(restoLinea) && regexBuscarEnPdf.test(bloqueAmpliadoParaBusqueda)) {
+                                            encontradoEnPdf = true;
                                         }
 
                                         if (!encontradoEnPdf) {
@@ -465,28 +460,27 @@
                                         }
                                     }
 
-                                    if (lineasFaltantes.length > 0) {
-                                        cambiosParaEsteCodigo.push(lineasFaltantes.join('\n'));
-                                    }
-
-                                    if (cambiosParaEsteCodigo.length > 0) {
-                                        globalReportList.push({
-                                            Archivo: pdfFile.name,
-                                            Codigo: codigo,
-                                            Cambio: [...new Set(cambiosParaEsteCodigo)].join('\n')
-                                        });
-                                    }
+                                    if (lineasFaltantes.length > 0) erroresEncontrados.push(`${codigo} -> Revisar: ${lineasFaltantes.join(', ')}`);
                                 }
                             }
                         }
+
+                        if (erroresEncontrados.length > 0) {
+                            globalReport.push(`\n[ ${pdfFile.name} ]\n` + erroresEncontrados.join('\n'));
+                            totalAlerts += erroresEncontrados.length;
+                        } else {
+                            globalReport.push(`\n[ ${pdfFile.name} ]\nValidado correctamente. Sin errores.`);
+                        }
                     }
 
-                    if (globalReportList.length > 0) {
-                        setReportData(globalReportList);
-                        addLog(`✅ ¡Proceso completado! Se encontraron ${globalReportList.length} códigos con correcciones.`);
-                    } else {
-                        setReportData([]); // Vacio significa éxito total
-                        addLog(`✅ ¡Proceso completado! Todo coincide perfectamente.`);
+                    if (codigosCompletamenteNoEncontrados.size > 0) {
+                        globalReport.push(`\n[ CÓDIGOS NO ENCONTRADOS EN NINGÚN CATÁLOGO ]\n` + Array.from(codigosCompletamenteNoEncontrados).join('\n'));
+                        totalAlerts += codigosCompletamenteNoEncontrados.size;
+                    }
+
+                    if (globalReport.length > 0) {
+                        setReport(["REPORTE DE VALIDACIÓN", "=======================", ...globalReport]);
+                        addLog(`✅ ¡Proceso completado! Se generaron ${totalAlerts} líneas de reporte.`);
                     }
 
                 } catch (error) {
@@ -497,21 +491,18 @@
                 }
             };
 
-            const downloadExcelReport = () => {
-                if (!reportData || reportData.length === 0) return;
-                
-                // Mapeamos para que las cabeceras de Excel queden bonitas
-                const exportData = reportData.map(item => ({
-                    "Código": item.Codigo,
-                    "Cambio": item.Cambio,
-                    "Catálogo (PDF)": item.Archivo
-                }));
-
-                const worksheet = XLSX.utils.json_to_sheet(exportData);
-                const workbook = XLSX.utils.book_new();
-                XLSX.utils.book_append_sheet(workbook, worksheet, "Cambios_a_Aplicar");
-                
-                XLSX.writeFile(workbook, 'Reporte_Cambios_ADL.xlsx');
+            const downloadReport = () => {
+                if (!report) return;
+                const contenido = report.join('\n');
+                const blob = new Blob([contenido], { type: 'text/plain;charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'Reporte_Validacion.txt';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
             };
 
             return (
@@ -533,7 +524,6 @@
                         </header>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-5">
-                            
                             <div 
                                 className="bg-white rounded-[1.25rem] p-5 cursor-pointer hover:border-gray-300 border border-transparent transition-all card-shadow relative"
                                 onClick={() => fileInputPdfRef.current.click()}
@@ -619,7 +609,7 @@
                             </button>
                         </div>
 
-                        {logs.length > 0 && !reportData && (
+                        {logs.length > 0 && !report && (
                             <div className="bg-white rounded-[1.25rem] p-4 mb-4 card-shadow border border-gray-100">
                                  <div className="font-mono text-[11px] text-gray-500 space-y-1">
                                     {logs.map((log, i) => <div key={i}>{log}</div>)}
@@ -627,52 +617,27 @@
                             </div>
                         )}
 
-                        {reportData && (
+                        {report && (
                             <div className="bg-white rounded-[1.25rem] p-5 md:p-6 card-shadow border-t-4 border-[#D4FF26]">
                                 <div className="flex flex-col sm:flex-row justify-between items-center gap-4 mb-5">
                                     <div className="flex items-center gap-3">
                                         <div className="w-8 h-8 rounded-full bg-[#D4FF26] flex items-center justify-center shrink-0">
                                             <svg className="w-4 h-4 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                                         </div>
-                                        <h3 className="text-lg font-bold text-[#111111]">Cambios a Aplicar</h3>
+                                        <h3 className="text-lg font-bold text-[#111111]">Reporte Generado</h3>
                                     </div>
-                                    {reportData.length > 0 && (
-                                        <button 
-                                            onClick={downloadExcelReport}
-                                            className="bg-[#111111] text-white px-5 py-2.5 rounded-full text-xs font-bold hover:bg-gray-800 transition-colors shrink-0 w-full sm:w-auto text-center flex items-center justify-center gap-2"
-                                        >
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                                            Exportar a Excel
-                                        </button>
-                                    )}
+                                    <button 
+                                        onClick={downloadReport}
+                                        className="bg-gray-100 text-[#111111] px-4 py-2 rounded-full text-xs font-bold hover:bg-gray-200 transition-colors shrink-0 w-full sm:w-auto text-center"
+                                    >
+                                        Exportar TXT
+                                    </button>
                                 </div>
-                                
-                                {reportData.length > 0 ? (
-                                    <div className="bg-white rounded-xl overflow-hidden border border-gray-100 max-h-[400px] overflow-y-auto custom-scrollbar">
-                                        <table className="w-full text-left border-collapse">
-                                            <thead className="sticky top-0 bg-gray-50 z-10 shadow-sm">
-                                                <tr className="text-gray-500 text-[10px] uppercase tracking-wider">
-                                                    <th className="p-3 border-b border-gray-100 font-bold w-1/4">Código</th>
-                                                    <th className="p-3 border-b border-gray-100 font-bold w-2/4">Cambio</th>
-                                                    <th className="p-3 border-b border-gray-100 font-bold w-1/4">Catálogo</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="text-xs text-gray-700">
-                                                {reportData.map((item, idx) => (
-                                                    <tr key={idx} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                                        <td className="p-3 font-mono font-bold align-top">{item.Codigo}</td>
-                                                        <td className="p-3 whitespace-pre-wrap font-medium align-top leading-relaxed">{item.Cambio}</td>
-                                                        <td className="p-3 text-gray-400 align-top">{item.Archivo}</td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                ) : (
-                                    <div className="bg-gray-50 rounded-xl p-6 text-center border border-gray-100">
-                                        <p className="text-sm font-semibold text-gray-600">Todo está impecable. No hay cambios pendientes.</p>
-                                    </div>
-                                )}
+                                <div className="bg-gray-50 rounded-xl p-4 max-h-[400px] overflow-y-auto custom-scrollbar border border-gray-100">
+                                    <pre className="text-[#111111] font-mono text-xs leading-relaxed whitespace-pre-wrap">
+                                        {report.join('\n')}
+                                    </pre>
+                                </div>
                             </div>
                         )}
 
