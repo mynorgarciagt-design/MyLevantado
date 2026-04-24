@@ -286,9 +286,35 @@
                                 else nuevasColumnas[col] = col;
                             });
 
+                            // MEMORIA PARA CELDAS UNIFICADAS
+                            let lastValues = { codigo: "", precio: "", antes: "", logos: "", piel: "" };
+                            
                             let df = sheetData.map(row => {
                                 let newRow = {};
                                 for (let key in row) newRow[nuevasColumnas[key]] = row[key];
+                                
+                                let cod = cleanVal(newRow.codigo);
+                                let col = cleanVal(newRow.color);
+                                
+                                // Si hay código, actualizamos la memoria
+                                if (cod !== "") {
+                                    lastValues = {
+                                        codigo: newRow.codigo,
+                                        precio: newRow.precio,
+                                        antes: newRow.antes,
+                                        logos: newRow.logos,
+                                        piel: newRow.piel
+                                    };
+                                } 
+                                // Si no hay código pero sí hay color (Celda unificada detectada)
+                                else if (cod === "" && col !== "") {
+                                    newRow.codigo = lastValues.codigo;
+                                    newRow.precio = lastValues.precio;
+                                    newRow.antes = lastValues.antes;
+                                    newRow.logos = lastValues.logos;
+                                    newRow.piel = lastValues.piel;
+                                }
+                                
                                 return newRow;
                             }).filter(row => cleanVal(row.codigo) !== "");
 
