@@ -283,6 +283,7 @@
                                 else if (colL.includes('categoria')) { nuevasColumnas[col] = 'categoria'; }
                                 else if (colL.includes('material')) { nuevasColumnas[col] = 'material'; }
                                 else if (colL.includes('medida')) { nuevasColumnas[col] = 'medidas'; }
+                                else if (colL.includes('otros')) { nuevasColumnas[col] = 'otros'; }
                                 else nuevasColumnas[col] = col;
                             });
 
@@ -350,6 +351,8 @@
                                 // ESTRUCTURA AGORA
                                 // ---------------------------------------------------------
                                 if (empresaSeleccionada === 'agora') {
+                                    let otrosVal = cleanVal(grupo[0].otros);
+                                    if (otrosVal) textoFinal += `${otrosVal}\n`;
                                     textoFinal += `${codigo.toUpperCase()}\n`;
                                     
                                     let mapaTallas = new Map();
@@ -378,7 +381,7 @@
                                     if (rLogo) logosAgora.push(rLogo);
                                     if (rPiel && !limpiarTexto(rLogo).includes('piel')) logosAgora.push(rPiel);
                                     
-                                    if (logosAgora.length > 0) textoFinal += `${logosAgora.join(' / ')}\n`;
+                                    if (logosAgora.length > 0) textoFinal += `${logosAgora.join(' ')}\n`;
                                 } 
                                 // ---------------------------------------------------------
                                 // ESTRUCTURA MULTIMODAS (CON O SIN OFERTAS)
