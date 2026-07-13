@@ -265,7 +265,7 @@
                         if (filaTitulos !== -1) {
                             const sheetData = XLSX.utils.sheet_to_json(worksheet, { range: filaTitulos, defval: "" });
                             let nuevasColumnas = {};
-                            let encontrados = { codigo: false, color: false, tallas: false, precio: false, antes: false, altura: false, logos: false, piel: false };
+                            let encontrados = { codigo: false, color: false, tallas: false, precio: false, antes: false, altura: false, logos: false, marcas: false, piel: false };
 
                             Object.keys(sheetData[0] || {}).forEach(col => {
                                 let colL = limpiarTexto(col);
@@ -276,6 +276,7 @@
                                 else if (colL.includes('antes') && !encontrados.antes) { nuevasColumnas[col] = 'antes'; encontrados.antes = true; }
                                 else if (colL.includes('altura') && !encontrados.altura) { nuevasColumnas[col] = 'altura'; encontrados.altura = true; }
                                 else if (colL.includes('logo') && !encontrados.logos) { nuevasColumnas[col] = 'logos'; encontrados.logos = true; }
+                                else if (colL.includes('marca') && !encontrados.marcas) { nuevasColumnas[col] = 'marcas'; encontrados.marcas = true; }
                                 else if (colL.includes('piel') && !encontrados.piel) { nuevasColumnas[col] = 'piel'; encontrados.piel = true; }
                                 else if (colL.includes('nombre') && colL.includes('producto')) { nuevasColumnas[col] = 'nombre_producto'; }
                                 else if (colL.includes('descripcion')) { nuevasColumnas[col] = 'descripcion'; }
@@ -288,7 +289,7 @@
                             });
 
                             // MEMORIA PARA CELDAS UNIFICADAS
-                            let lastValues = { codigo: "", precio: "", antes: "", logos: "", piel: "" };
+                            let lastValues = { codigo: "", precio: "", antes: "", logos: "", marcas: "", piel: "" };
                             
                             let df = sheetData.map(row => {
                                 let newRow = {};
@@ -304,6 +305,7 @@
                                         precio: newRow.precio,
                                         antes: newRow.antes,
                                         logos: newRow.logos,
+                                        marcas: newRow.marcas,
                                         piel: newRow.piel
                                     };
                                 } 
@@ -313,6 +315,7 @@
                                     newRow.precio = lastValues.precio;
                                     newRow.antes = lastValues.antes;
                                     newRow.logos = lastValues.logos;
+                                    newRow.marcas = lastValues.marcas;
                                     newRow.piel = lastValues.piel;
                                 }
                                 
@@ -373,13 +376,15 @@
                                     let precio = String(grupo[0].precio).replace(/q/gi, '').replace(/\.0+$/, '').trim();
                                     textoFinal += `Q. ${precio}\n`;
 
-                                    // CORRECCIÓN: Logos de Agora sin jerarquía, todos hasta abajo
+                                    // Logos de Agora sin jerarquía, todos hasta abajo (logos + marcas dedup + piel), separados por espacio
                                     let rLogo = cleanVal(grupo[0].logos);
+                                    let rMarca = cleanVal(grupo[0].marcas);
                                     let rPiel = cleanVal(grupo[0].piel);
                                     let logosAgora = [];
                                     
                                     if (rLogo) logosAgora.push(rLogo);
-                                    if (rPiel && !limpiarTexto(rLogo).includes('piel')) logosAgora.push(rPiel);
+                                    if (rMarca && limpiarTexto(rMarca) !== limpiarTexto(rLogo)) logosAgora.push(rMarca);
+                                    if (rPiel && !limpiarTexto(rLogo + " " + rMarca).includes('piel')) logosAgora.push(rPiel);
                                     
                                     if (logosAgora.length > 0) textoFinal += `${logosAgora.join(' ')}\n`;
                                 } 
